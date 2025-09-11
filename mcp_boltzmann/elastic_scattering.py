@@ -5,8 +5,14 @@ import vegas
 from functools import partial
 
 from scipy.integrate import quad
+from scipy.interpolate import LinearNDInterpolator
+
 from . import polylog as plog
 from mcp_boltzmann.kinematics import beta_t
+
+def load_tabulated_rate(path):
+    with np.load(path) as rate_file:
+        return LinearNDInterpolator(rate_file['temp_grid'], rate_file['rate'])
 
 class ElasticCollisionIntegral:
     def __init__(self, M_a, M_b, M_phi, zeta_a=0, zeta_b=0):

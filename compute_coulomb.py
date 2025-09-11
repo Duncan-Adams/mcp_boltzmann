@@ -1,7 +1,11 @@
 import os
-import sys
-import schwimmbadd
+import argparse
+import time
+import warnings
+from functools import partial
 
+import numpy as np
+import schwimmbad
 from scipy.interpolate import interp1d
 
 import mcp_boltzmann.elastic_scattering as elscat
@@ -15,65 +19,65 @@ def setup_coulomb_integrals(mass, mgam):
     m_c = 1270
     m_mcp = mass
     
-    coulomb_e = ElasticCollisionIntegral(m_e, m_b, mgam, zeta_a=1, zeta_b=1)
+    coulomb_e = elscat.ElasticCollisionIntegral(m_e, m_mcp, mgam, zeta_a=1, zeta_b=1)
     coulomb_e.matrix_element_nml['c222'] = 0.75
     coulomb_e.matrix_element_nml['c002'] = 0.75
     coulomb_e.matrix_element_nml['c202'] = -0.25
     coulomb_e.matrix_element_nml['c022'] = -0.25
-    coulomb_e.matrix_element_nml['c001'] = m_b**2 + m_e**2
-    coulomb_e.matrix_element_nml['c201'] = m_b**2
+    coulomb_e.matrix_element_nml['c001'] = m_mcp**2 + m_e**2
+    coulomb_e.matrix_element_nml['c201'] = m_mcp**2
     coulomb_e.matrix_element_nml['c021'] = m_e**2
-    coulomb_e.matrix_element_nml['c000'] = 4*m_e**2*m_b**2
+    coulomb_e.matrix_element_nml['c000'] = 4*m_e**2*m_mcp**2
     
-    coulomb_mu = ElasticCollisionIntegral(m_mu, m_b, mgam, zeta_a=1, zeta_b=1)
+    coulomb_mu = elscat.ElasticCollisionIntegral(m_mu, m_mcp, mgam, zeta_a=1, zeta_b=1)
     coulomb_mu.matrix_element_nml['c222'] = 0.75
     coulomb_mu.matrix_element_nml['c002'] = 0.75
     coulomb_mu.matrix_element_nml['c202'] = -0.25
     coulomb_mu.matrix_element_nml['c022'] = -0.25
-    coulomb_mu.matrix_element_nml['c001'] = m_b**2 + m_mu**2
-    coulomb_mu.matrix_element_nml['c201'] = m_b**2
+    coulomb_mu.matrix_element_nml['c001'] = m_mcp**2 + m_mu**2
+    coulomb_mu.matrix_element_nml['c201'] = m_mcp**2
     coulomb_mu.matrix_element_nml['c021'] = m_mu**2
-    coulomb_mu.matrix_element_nml['c000'] = 4*m_mu**2*m_b**2
+    coulomb_mu.matrix_element_nml['c000'] = 4*m_mu**2*m_mcp**2
 
-    coulomb_tau = ElasticCollisionIntegral(m_tau, m_b, mgam, zeta_a=1, zeta_b=1)
+    coulomb_tau = elscat.ElasticCollisionIntegral(m_tau, m_mcp, mgam, zeta_a=1, zeta_b=1)
     coulomb_tau.matrix_element_nml['c222'] = 0.75
     coulomb_tau.matrix_element_nml['c002'] = 0.75
     coulomb_tau.matrix_element_nml['c202'] = -0.25
     coulomb_tau.matrix_element_nml['c022'] = -0.25
-    coulomb_tau.matrix_element_nml['c001'] = m_b**2 + m_tau**2
-    coulomb_tau.matrix_element_nml['c201'] = m_b**2
+    coulomb_tau.matrix_element_nml['c001'] = m_mcp**2 + m_tau**2
+    coulomb_tau.matrix_element_nml['c201'] = m_mcp**2
     coulomb_tau.matrix_element_nml['c021'] = m_tau**2
-    coulomb_tau.matrix_element_nml['c000'] = 4*m_tau**2*m_b**2
+    coulomb_tau.matrix_element_nml['c000'] = 4*m_tau**2*m_mcp**2
 
-    coulomb_lq = ElasticCollisionIntegral(0.0, m_b, mgam, zeta_a=1, zeta_b=1)
+    coulomb_lq = elscat.ElasticCollisionIntegral(0.0, m_mcp, mgam, zeta_a=1, zeta_b=1)
     coulomb_lq.matrix_element_nml['c222'] = 0.75
     coulomb_lq.matrix_element_nml['c002'] = 0.75
     coulomb_lq.matrix_element_nml['c202'] = -0.25
     coulomb_lq.matrix_element_nml['c022'] = -0.25
-    coulomb_lq.matrix_element_nml['c001'] = m_b**2 
-    coulomb_lq.matrix_element_nml['c201'] = m_b**2
+    coulomb_lq.matrix_element_nml['c001'] = m_mcp**2 
+    coulomb_lq.matrix_element_nml['c201'] = m_mcp**2
     coulomb_lq.matrix_element_nml['c021'] = 0
     coulomb_lq.matrix_element_nml['c000'] = 0
     
-    coulomb_strange = ElasticCollisionIntegral(m_s, m_b, mgam, zeta_a=1, zeta_b=1)
+    coulomb_strange = elscat.ElasticCollisionIntegral(m_s, m_mcp, mgam, zeta_a=1, zeta_b=1)
     coulomb_strange.matrix_element_nml['c222'] = 0.75
     coulomb_strange.matrix_element_nml['c002'] = 0.75
     coulomb_strange.matrix_element_nml['c202'] = -0.25
     coulomb_strange.matrix_element_nml['c022'] = -0.25
-    coulomb_strange.matrix_element_nml['c001'] = m_b**2 + m_s**2
-    coulomb_strange.matrix_element_nml['c201'] = m_b**2
+    coulomb_strange.matrix_element_nml['c001'] = m_mcp**2 + m_s**2
+    coulomb_strange.matrix_element_nml['c201'] = m_mcp**2
     coulomb_strange.matrix_element_nml['c021'] = m_s**2
-    coulomb_strange.matrix_element_nml['c000'] = 4*m_s**2*m_b**2
+    coulomb_strange.matrix_element_nml['c000'] = 4*m_s**2*m_mcp**2
     
-    coulomb_charm = ElasticCollisionIntegral(m_c, m_b, mgam, zeta_a=1, zeta_b=1)
+    coulomb_charm = elscat.ElasticCollisionIntegral(m_c, m_mcp, mgam, zeta_a=1, zeta_b=1)
     coulomb_charm.matrix_element_nml['c222'] = 0.75
     coulomb_charm.matrix_element_nml['c002'] = 0.75
     coulomb_charm.matrix_element_nml['c202'] = -0.25
     coulomb_charm.matrix_element_nml['c022'] = -0.25
-    coulomb_charm.matrix_element_nml['c001'] = m_b**2 + m_c**2
-    coulomb_charm.matrix_element_nml['c201'] = m_b**2
+    coulomb_charm.matrix_element_nml['c001'] = m_mcp**2 + m_c**2
+    coulomb_charm.matrix_element_nml['c201'] = m_mcp**2
     coulomb_charm.matrix_element_nml['c021'] = m_c**2
-    coulomb_charm.matrix_element_nml['c000'] = 4*m_c**2*m_b**2
+    coulomb_charm.matrix_element_nml['c000'] = 4*m_c**2*m_mcp**2
     
     return {
         "rate_e": coulomb_e, 
@@ -84,10 +88,10 @@ def setup_coulomb_integrals(mass, mgam):
         "rate_charm": coulomb_charm
         } 
     
-    
-    
-#compute the rate for mcp coulomb scattering (divided by 16*np.pi*e**4*Q**2*Q_mcp**2
-def compute_coulomb_rate(proc, mass, T_min, T_max, n_temps, outdir, n_strat, neval, nitn):
+def compute_coulomb_rate(mass, Tm_min, Tm_max, n_temps, outdir, n_strat, neval, nitn):
+    warnings.filterwarnings('ignore')
+    T_min = mass*Tm_min
+    T_max = mass*Tm_max
     Temp_grid = np.geomspace(T_min, T_max, n_temps)
     
     #setup up callable that computes photon plasma mass
@@ -114,9 +118,9 @@ def compute_coulomb_rate(proc, mass, T_min, T_max, n_temps, outdir, n_strat, nev
     rate_int_charm = rate_funs['rate_charm']
     
     temp_grid_2d = []
-    for i in temp_grid_1d:
-        for j in temp_grid_1d:
-            temp_grid_2d.append([i,j])
+    for Ti in Temp_grid:
+        for Tj in Temp_grid:
+            temp_grid_2d.append([Ti,Tj])
             
     result_e = np.zeros(len(temp_grid_2d))
     result_mu = np.zeros(len(temp_grid_2d))
@@ -140,7 +144,7 @@ def compute_coulomb_rate(proc, mass, T_min, T_max, n_temps, outdir, n_strat, nev
             
     #compute prefactors, dont include millicharge since all processes rescale with the millicharge
     alpha = 1.0/137.0
-    e = np.sqrt(4*alpha/np.pi)
+    e = np.sqrt(4*alpha*np.pi)
     
     q_u = 2/3
     q_d = -1/3
@@ -157,7 +161,7 @@ def compute_coulomb_rate(proc, mass, T_min, T_max, n_temps, outdir, n_strat, nev
     name = f'mcp_coulomb_rate_m_{mass}_Q_1.npz'
     
     #save to a npz file
-    np.savez_compressed(os.path.join(out_dir,name), n_temps = n_temps, temp_grid = temp_grid_2d, rate = result_total)  
+    np.savez_compressed(os.path.join(outdir,name), n_temps = n_temps, temp_grid = temp_grid_2d, rate = result_total)  
         
     
 if __name__ == "__main__":
@@ -167,10 +171,10 @@ if __name__ == "__main__":
                     prog='compute_coulomb.py',
                     description='tabulate coulomb scattering rates for MCPs')
 
-    parser.add_argument('mcp_mass', action='store', type=float, help='mass in MeV of milli-charged particle')
-    parser.add_argument('T_min', action='store', type=float, help='minimum temperature in MeV to compute rates at')
-    parser.add_argument('T_max', action='store', type=float, help='maximum temperature in MeV to compute rates at')
-    parser.add_argument('n_temps', action='store', type=float, help='number of temperatures in temperature grid')
+    parser.add_argument('mass_list', action='store', type=str, help='file containing masses in MeV of milli-charged particle')
+    parser.add_argument('Tm_min', action='store', type=float, help='minimum T in units of mass to compute rates at')
+    parser.add_argument('Tm_max', action='store', type=float, help='maximum T in units of mass to compute rates at')
+    parser.add_argument('n_temps', action='store', type=int, help='number of temperatures in temperature grid')
     parser.add_argument('--outdir', dest='outdir', action='store', default='./', type=str)
 
     group = parser.add_mutually_exclusive_group()
@@ -180,16 +184,18 @@ if __name__ == "__main__":
                        action="store_true", help="Run with MPI.")
     args = parser.parse_args()
 
-    if not os.path.exists(outdir):
-        os.makedirs(outdir, exist_ok=True)
-
+    if not os.path.exists(args.outdir):
+        os.makedirs(args.outdir, exist_ok=True)
 
     pool = schwimmbad.choose_pool(mpi=args.mpi, processes=args.n_cores)
+    
+    fun_loop = partial(compute_coulomb_rate, x_min=args.x_min, x_max=args.x_max, n_temps=args.n_temps, outdir=args.outdir, n_strat=([3]+[3]), neval=1e3, nitn=10)
 
-    fun_loop = partial(compute_coulomb_rate, T_min=args.T_min, T_max=args.T_max, n_temps=args.n_temps, outdir=args.outdir, n_strat=([5]+[5]), neval=1e6, nint=100)
+    # ~ fun_loop = partial(compute_coulomb_rate, T_min=args.T_min, T_max=args.T_max, n_temps=args.n_temps, outdir=args.outdir, n_strat=([5]+[5]), neval=1e6, nitn=100)
 
+    masses = np.loadtxt(args.mass_list)
     time_start = time.time()
-    for p in pool.map(Sub_Analyze_loop, files):
+    for p in pool.map(fun_loop, np.atleast_1d(masses)):
         pass
     pool.close()
 
