@@ -12,7 +12,7 @@ from mcp_boltzmann.kinematics import beta_t
 
 def load_tabulated_rate(path):
     with np.load(path) as rate_file:
-        return LinearNDInterpolator(rate_file['temp_grid'], rate_file['rate'])
+        return LinearNDInterpolator(rate_file['temp_grid'], rate_file['rate'], fill_value=0.0)
 
 class ElasticCollisionIntegral:
     def __init__(self, M_a, M_b, M_phi, zeta_a=0, zeta_b=0):
