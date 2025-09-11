@@ -189,7 +189,7 @@ if __name__ == "__main__":
 
     pool = schwimmbad.choose_pool(mpi=args.mpi, processes=args.n_cores)
     
-    fun_loop = partial(compute_coulomb_rate, x_min=args.x_min, x_max=args.x_max, n_temps=args.n_temps, outdir=args.outdir, n_strat=([3]+[3]), neval=1e3, nitn=10)
+    fun_loop = partial(compute_coulomb_rate, Tm_min=args.Tm_min, Tm_max=args.Tm_max, n_temps=args.n_temps, outdir=args.outdir, n_strat=([3]+[3]), neval=1e3, nitn=10)
 
     # ~ fun_loop = partial(compute_coulomb_rate, T_min=args.T_min, T_max=args.T_max, n_temps=args.n_temps, outdir=args.outdir, n_strat=([5]+[5]), neval=1e6, nitn=100)
 
