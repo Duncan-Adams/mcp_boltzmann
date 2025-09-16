@@ -4,6 +4,8 @@ import numpy as np
 import scipy.special as sps
 from mpmath import fp as fp
 
+z3 = 1.20206 #zeta of 3
+
 @np.vectorize
 def polylog_vec(s, z):
     return fp.polylog(s, z)
@@ -20,6 +22,29 @@ def Li2(x):
 #this is almost an OOM faster that mpmath.fp.polylog(3, x)
 def Li3(x):
     return x + x**2/8 + x**3/27 + x**4/64 + x**5/125 + x**6/216
+    
+    
+#Approximations based on a stitching together of power series and asymptotic expansions
+def Lie2(x):
+    return np.where(
+        x<=1, 
+        -(np.pi**2)/12 - x**2/4 - x**3/24 - x*np.log(2), 
+        np.exp(-3*x)/9 - np.exp(-2*x)/4 + np.exp(-x) - np.pi**2/6 - x**2/2
+    )
+    
+def Lie3(x):
+    return np.where(
+        x<=0.6, 
+        -(np.pi**2/12)*x - (x**3)/12 - (x**2/2)*np.log(2) - 3*z3/4, 
+        -np.exp(-3*x)/27 + np.exp(-2*x)/8 - np.exp(-x) - (np.pi**2/6)*x - (x**3/6)
+    )
+
+def Lie4(x):
+    return np.where(
+        x <= 0.4, 
+        -(7/720)*np.pi**4 - (np.pi**2/24)*x**2 - (x**3/6)*np.log(2) - (3/4)*z3*x, 
+        +np.exp(-3*x)/81 - np.exp(-2*x)/16 + np.exp(-x) - (7*np.pi**4)/360 - (np.pi**2/12)*x**2 - (x**4/24)
+    )
 
 def polylog_fast(n, x):
     '''

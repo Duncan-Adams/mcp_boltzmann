@@ -1,0 +1,204 @@
+#boltzmann.py - routines and class for solving boltzmann equation
+import warnings
+
+import numpy as np
+from scipy.integrate import solve_ivp
+
+from mcp_boltzmann.distributions import *
+
+#Fundametal parameters
+MeV = 1
+GeV = 1e3
+M_Planck = 1.22 * 1e19 * GeV
+
+m_e = 0.511*MeV
+m_mu = 105*MeV
+
+
+def rho_EM(T_gam):
+    return rho_gam(T_gam) + rho_e(T_gam)
+
+def p_EM(T_gam):
+    return (1/3)*rho_gam(T_gam) + p_e(T_gam)
+
+def drho_EM_dT(T_gam):
+    return drho_gamdT(T_gam) + drho_edT(T_gam)
+
+def rho_nuetrino(T_nu):
+    return 3*rho_nu(T_nu, np.zeros_like(T_nu))
+
+def drho_nuetrino_dT(T_nu):
+    return 3*drho_nudT(T_nu, np.zeros_like(T_nu))
+
+def rho_DS(T_ds, m_mcp):
+    return rho_gam(T_ds) + rhoDM_FD(T_ds, np.zeros_like(T_ds), m_mcp)
+
+def p_DS(T_ds, m_mcp):
+    return (1/3)*rho_gam(T_ds) + p_DM_FD(T_ds, np.zeros_like(T_ds), m_mcp)
+
+def drho_DS_dT(T_ds, m_mcp):
+    return drho_gamdT(T_ds) + drhoDM_dT_FD(T_ds, np.zeros_like(T_ds), m_mcp)
+
+def Hubble(T_gam, T_nu, T_ds, m_mcp):
+    rho_tot = rho_EM(T_gam) + rho_nuetrino(T_nu) + rho_DS(T_ds, m_mcp)
+    return np.sqrt((8 * np.pi)/(3 * M_Planck**2) * (rho_tot))
+    
+def Hubble_SM(T_gam, T_nu):
+    rho_tot = rho_EM(T_gam) + rho_nuetrino(T_nu)
+    return np.sqrt((8 * np.pi)/(3 * M_Planck**2) * (rho_tot))
+
+
+class Boltzmann:
+    def __init__(self, m_mcp):
+        self.m_mcp = m_mcp
+        self.Q = 1
+        self.colterms_EM_NU = [] #collision terms between em sector and nuetrino sector
+        self.colterms_EM_DS = [] #collision terms between em sector and dark sector
+
+    def add_colterm_EM_NU(self, colterm):
+        '''
+        Add a collision term representing energy transfer bewteen EM and nuetrino sectors
+        colterm should have signature F(T_gam, T_nu), should be positive for T_gam > T_nu
+        '''
+        self.colterms_EM_NU.append(colterm)
+        return
+
+    def add_colterm_EM_DS(self, colterm):
+        '''
+        Add a collision term representing energy transfer bewteen EM and dark sectors
+        colterm should have signature F(T_gam, T_ds, Q), should be positive for T_gam > T_ds
+        '''
+        self.colterms_EM_DS.append(colterm)
+        return
+        
+    def colterm_EM_NU(self, T_gam, T_nu):
+        res = 0
+        for C in self.colterms_EM_NU:
+            res += C(T_gam, T_nu)
+        return res
+    
+    def colterm_EM_DS(self, T_gam, T_ds):
+        res = 0
+        for C in self.colterms_EM_DS:
+            res += C(T_gam, T_ds, self.Q)
+        return res
+            
+    def dT_EM_dt(self, T_gam, T_nu, T_ds):
+        H = Hubble(T_gam, T_nu, T_ds, self.m_mcp)
+        
+        hub_term = -3*H*(rho_EM(T_gam) + p_EM(T_gam))
+        col_term = -self.colterm_EM_NU(T_gam, T_nu) - self.colterm_EM_DS(T_gam, T_ds)
+        
+        return (1/drho_EM_dT(T_gam))*(hub_term + col_term)
+        
+    def dT_EM_dt_SM(self, T_gam, T_nu):
+        H = Hubble_SM(T_gam, T_nu)
+        
+        hub_term = -3*H*(rho_EM(T_gam) + p_EM(T_gam))
+        col_term = -self.colterm_EM_NU(T_gam, T_nu)
+        
+        return (1/drho_EM_dT(T_gam))*(hub_term + col_term)
+       
+    def dT_nuetrino_dt(self, T_gam, T_nu, T_ds):
+        H = Hubble(T_gam, T_nu, T_ds, self.m_mcp)
+        
+        hub_term = -4*H*(rho_nuetrino(T_nu))
+        col_term = self.colterm_EM_NU(T_gam, T_nu)
+        
+        return (1/drho_nuetrino_dT(T_nu))*(hub_term + col_term)
+        
+    def dT_nuetrino_dt_SM(self, T_gam, T_nu):
+        H = Hubble_SM(T_gam, T_nu)
+        
+        hub_term = -4*H*(rho_nuetrino(T_nu))
+        col_term = self.colterm_EM_NU(T_gam, T_nu)
+        
+        return (1/drho_nuetrino_dT(T_nu))*(hub_term + col_term)
+        
+    def dT_DS_dt(self, T_gam, T_nu, T_ds):
+        H = Hubble(T_gam, T_nu, T_ds, self.m_mcp)
+        
+        hub_term = -3*H*(rho_DS(T_ds, self.m_mcp) + p_DS(T_ds, self.m_mcp))
+        col_term = self.colterm_EM_DS(T_gam, T_ds)
+        
+        return (1/drho_DS_dT(T_ds, self.m_mcp))*(hub_term + col_term)
+        
+    def solve_boltzmann_eq(self, T_gam0, T_nu0, T_ds0, Q):
+        '''
+        Setup and solve the coupled boltzmann equations governing the evolution of the EM temperature, nuetrino temperature
+        and the dark sector temperature, with a massless dark photon and a  millicharged particle of mass self.m_mcp and charge Q
+        
+        Params
+        ------
+        T_gam0 - initial electromagnetic plasma temperature
+        T_nu0 - initial nuetrino temp, should probably be equl to T_gam0 unless you want to do some funky shit
+        T_ds0 - initial dark sector temperature
+        Q - EM charge of millicharged particle
+        
+        Returns
+        -------
+        
+        sol - output of scipy.integrate.solve_ivp containing the temperatures of the 3 sectors as a function of time
+        '''
+        
+        self.Q = Q
+        
+        def dT(t, vec):
+            T_gam, T_nu, T_ds = vec
+            res = np.array([
+                self.dT_EM_dt(T_gam, T_nu, T_ds)[0],
+                self.dT_nuetrino_dt(T_gam, T_nu, T_ds)[0],
+                self.dT_DS_dt(T_gam, T_nu, T_ds)[0]
+            ]
+            )
+            return res
+            
+        IC = [T_gam0, T_nu0, T_ds0]
+        t0 = 1./(2 * Hubble(T_gam0, T_nu0, T_ds0, self.m_mcp))[0]
+        t_max = 1e29
+        t_eval = np.geomspace(t0, t_max, 500)
+        
+        sol = solve_ivp(dT, [t0, t_max], IC, t_eval=t_eval, method='BDF', rtol=1e-6, atol=1e-6)
+        
+        return sol
+        
+    def solve_boltzmann_eq_SM(self, T_gam0, T_nu0):
+        '''
+        Setup and solve the coupled boltzmann equations governing the evolution of the EM temperature and nuetrino temperature
+        in the standard model
+        
+        Params
+        ------
+        T_gam0 - initial electromagnetic plasma temperature
+        T_nu0 - initial nuetrino temp, should probably be equl to T_gam0 unless you want to do some funky shit
+        
+        Returns
+        -------
+        
+        sol - output of scipy.integrate.solve_ivp containing the temperatures of the 2 sectors as a function of time
+        '''
+        
+        def dT(t, vec):
+            T_gam, T_nu = vec
+            res = np.array([
+                self.dT_EM_dt_SM(T_gam, T_nu)[0],
+                self.dT_nuetrino_dt_SM(T_gam, T_nu)[0],
+            ]
+            )
+            return res
+            
+        IC = [T_gam0, T_nu0]
+        t0 = 1./(2 * Hubble(T_gam0, T_nu0, 0, 0))[0]
+        t_max = 1e29
+        t_eval = np.geomspace(t0, t_max, 500)
+        
+        sol = solve_ivp(dT, [t0, t_max], IC, t_eval=t_eval, method='BDF', rtol=1e-6, atol=1e-6)
+        
+        return sol
+            
+    def N_eff(self, T_gam, T_nu, T_ds):
+        return (8/7)*(11/4)**(4/3)*((3*rho_nu(T_nu, 0) + rho_DS(T_ds, self.m_mcp))/rho_EM(T_gam))
+
+    def N_eff_SM(self, T_gam, T_nu):
+        return (8/7)*(11/4)**(4/3)*((3*rho_nu(T_nu, 0))/rho_EM(T_gam))
+        

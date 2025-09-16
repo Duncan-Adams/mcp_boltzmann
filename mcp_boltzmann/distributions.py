@@ -3,6 +3,8 @@ from scipy.integrate import quad
 from scipy.interpolate import interp1d
 from scipy.special import kn
 
+from mcp_boltzmann.polylog import Lie2, Lie3, Lie4
+
 
 z3 = 1.20206 #zeta of 3
 LI2 = (np.pi**2)/12
