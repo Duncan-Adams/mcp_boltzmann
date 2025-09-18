@@ -42,14 +42,14 @@ def g_star_P_fd(T, m, g):
 @np.vectorize
 def g_star_E_nu(T):
     keV = 1e-3
-    T_nd = 500*keV
+    T_nd = 800*keV
 
     g_star_e_per_nu = 0.875
 
     if(T > T_nd):
         return 6*g_star_e_per_nu
             
-    pref = (6*7/8)
+    pref = 3.0*(2*7/8)
     m_e = 0.511
 
     return pref*((4/11)**(4/3) + (1 - (4/11)**(4/3))*(8/(4*7))*g_star_E_fd(T, m_e, 4))
@@ -57,13 +57,13 @@ def g_star_E_nu(T):
 @np.vectorize
 def g_star_P_nu(T):
     keV = 1e-3
-    T_nd = 500*keV
+    T_nd = 800*keV
     g_star_p_per_nu = 0.875
 
     if(T > T_nd):
         return 6*g_star_p_per_nu
             
-    pref = (6*7/8)
+    pref = 3.0*(2*7/8)
     m_e = 0.511
 
     return pref*((4/11)**(4/3) + (1 - (4/11)**(4/3))*(8/(4*7))*g_star_P_fd(T, m_e, 4))
@@ -115,8 +115,8 @@ def _load_gstar_hudsal(path, include_nuetrinos=True):
 
     #subtract out neutrino contributions if you want to model neutrinos as seperate sector in boltzmann equation
     if include_nuetrinos is False:
-        g_E = np.round(g_E - g_star_E_nu(Temp_in_MeV), 2)
-        g_P = np.round(g_P - g_star_P_nu(Temp_in_MeV), 2)
+        g_E = g_E - np.round(g_star_E_nu(Temp_in_MeV), 2)
+        g_P = g_P - np.round(g_star_P_nu(Temp_in_MeV), 2)
 
     return Temp_in_MeV, g_E, g_P
 

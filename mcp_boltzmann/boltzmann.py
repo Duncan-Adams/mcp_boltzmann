@@ -24,11 +24,20 @@ def p_EM(T_gam):
 
 def drho_EM_dT(T_gam):
     return 4*(np.pi**2/30)*gstar_E_EM(T_gam)*T_gam**3 + (np.pi**2/30)*d_gstar_E_EM_dT(T_gam)*T_gam**4
+    
+# ~ def rho_EM(T_gam):
+    # ~ return rho_gam(T_gam) + rho_e(T_gam)
 
-def rho_nuetrino(T_nu):
+# ~ def p_EM(T_gam):
+    # ~ return (1/3)*rho_gam(T_gam) + p_e(T_gam)
+
+# ~ def drho_EM_dT(T_gam):
+    # ~ return drho_gamdT(T_gam) + drho_edT(T_gam)
+
+def rho_neutrino(T_nu):
     return 3*rho_nu(T_nu, np.zeros_like(T_nu))
 
-def drho_nuetrino_dT(T_nu):
+def drho_neutrino_dT(T_nu):
     return 3*drho_nudT(T_nu, np.zeros_like(T_nu))
 
 def rho_DS(T_ds, m_mcp):
@@ -41,11 +50,11 @@ def drho_DS_dT(T_ds, m_mcp):
     return drho_gamdT(T_ds) + drhoDM_dT_FD(T_ds, np.zeros_like(T_ds), m_mcp)
 
 def Hubble(T_gam, T_nu, T_ds, m_mcp):
-    rho_tot = rho_EM(T_gam) + rho_nuetrino(T_nu) + rho_DS(T_ds, m_mcp)
+    rho_tot = rho_EM(T_gam) + rho_neutrino(T_nu) + rho_DS(T_ds, m_mcp)
     return np.sqrt((8 * np.pi)/(3 * M_Planck**2) * (rho_tot))
     
 def Hubble_SM(T_gam, T_nu):
-    rho_tot = rho_EM(T_gam) + rho_nuetrino(T_nu)
+    rho_tot = rho_EM(T_gam) + rho_neutrino(T_nu)
     return np.sqrt((8 * np.pi)/(3 * M_Planck**2) * (rho_tot))
 
 
@@ -100,7 +109,7 @@ class Boltzmann:
         
         return (1/drho_EM_dT(T_gam))*(hub_term + col_term)
        
-    def dT_nuetrino_dt(self, T_gam, T_nu, T_ds):
+    def dT_neutrino_dt(self, T_gam, T_nu, T_ds):
         #hack for now
         
         if T_gam >= 3:
@@ -108,12 +117,12 @@ class Boltzmann:
             
         H = Hubble(T_gam, T_nu, T_ds, self.m_mcp)
         
-        hub_term = -4*H*(rho_nuetrino(T_nu))
+        hub_term = -4*H*(rho_neutrino(T_nu))
         col_term = self.colterm_EM_NU(T_gam, T_nu)
         
-        return (1/drho_nuetrino_dT(T_nu))*(hub_term + col_term)
+        return (1/drho_neutrino_dT(T_nu))*(hub_term + col_term)
         
-    def dT_nuetrino_dt_SM(self, T_gam, T_nu):
+    def dT_neutrino_dt_SM(self, T_gam, T_nu):
         #hack for now
         
         if T_gam >= 3:
@@ -121,10 +130,10 @@ class Boltzmann:
         
         H = Hubble_SM(T_gam, T_nu)
         
-        hub_term = -4*H*(rho_nuetrino(T_nu))
+        hub_term = -4*H*(rho_neutrino(T_nu))
         col_term = self.colterm_EM_NU(T_gam, T_nu)
         
-        return (1/drho_nuetrino_dT(T_nu))*(hub_term + col_term)
+        return (1/drho_neutrino_dT(T_nu))*(hub_term + col_term)
         
     def dT_DS_dt(self, T_gam, T_nu, T_ds):
         H = Hubble(T_gam, T_nu, T_ds, self.m_mcp)
@@ -158,7 +167,7 @@ class Boltzmann:
             T_gam, T_nu, T_ds = vec
             res = np.array([
                 self.dT_EM_dt(T_gam, T_nu, T_ds)[0],
-                self.dT_nuetrino_dt(T_gam, T_nu, T_ds)[0],
+                self.dT_neutrino_dt(T_gam, T_nu, T_ds)[0],
                 self.dT_DS_dt(T_gam, T_nu, T_ds)[0]
             ]
             )
@@ -169,7 +178,7 @@ class Boltzmann:
         t_max = 1e29
         t_eval = np.geomspace(t0, t_max, 500)
         
-        sol = solve_ivp(dT, [t0, t_max], IC, t_eval=t_eval, method='BDF', rtol=1e-6, atol=1e-6)
+        sol = solve_ivp(dT, [t0, t_max], IC, t_eval=t_eval, method='BDF', rtol=1e-5, atol=1e-6)
         
         return sol
         
@@ -193,7 +202,7 @@ class Boltzmann:
             T_gam, T_nu = vec
             res = np.array([
                 self.dT_EM_dt_SM(T_gam, T_nu),
-                self.dT_nuetrino_dt_SM(T_gam, T_nu),
+                self.dT_neutrino_dt_SM(T_gam, T_nu),
             ]
             )
             return res
@@ -203,13 +212,13 @@ class Boltzmann:
         t_max = 1e29
         t_eval = np.geomspace(t0, t_max, 500)
         
-        sol = solve_ivp(dT, [t0, t_max], IC, t_eval=t_eval, method='BDF', rtol=1e-6, atol=1e-6)
+        sol = solve_ivp(dT, [t0, t_max], IC, t_eval=t_eval, method='BDF', rtol=1e-5, atol=1e-6)
         
         return sol
             
     def N_eff(self, T_gam, T_nu, T_ds):
-        return (8/7)*(11/4)**(4/3)*((3*rho_nu(T_nu, 0) + rho_DS(T_ds, self.m_mcp))/rho_EM(T_gam))
+        return (8/7)*(11/4)**(4/3)*((rho_neutrino(T_nu) + rho_DS(T_ds, self.m_mcp))/rho_EM(T_gam))
 
     def N_eff_SM(self, T_gam, T_nu):
-        return (8/7)*(11/4)**(4/3)*((3*rho_nu(T_nu, 0))/rho_EM(T_gam))
+        return (8/7)*(11/4)**(4/3)*((rho_neutrino(T_nu)/rho_EM(T_gam)))
         
