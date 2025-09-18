@@ -5,6 +5,7 @@ import numpy as np
 from scipy.integrate import solve_ivp
 
 from mcp_boltzmann.distributions import *
+from mcp_boltzmann.gstar import gstar_E_EM, d_gstar_E_EM_dT, w_EM
 
 #Fundametal parameters
 MeV = 1
@@ -16,13 +17,13 @@ m_mu = 105*MeV
 
 
 def rho_EM(T_gam):
-    return rho_gam(T_gam) + rho_e(T_gam)
+    return (np.pi**2/30)*gstar_E_EM(T_gam)*T_gam**4
 
 def p_EM(T_gam):
-    return (1/3)*rho_gam(T_gam) + p_e(T_gam)
+    return w_EM(T_gam)*rho_EM(T_gam)
 
 def drho_EM_dT(T_gam):
-    return drho_gamdT(T_gam) + drho_edT(T_gam)
+    return 4*(np.pi**2/30)*gstar_E_EM(T_gam)*T_gam**3 + (np.pi**2/30)*d_gstar_E_EM_dT(T_gam)*T_gam**4
 
 def rho_nuetrino(T_nu):
     return 3*rho_nu(T_nu, np.zeros_like(T_nu))
@@ -100,6 +101,11 @@ class Boltzmann:
         return (1/drho_EM_dT(T_gam))*(hub_term + col_term)
        
     def dT_nuetrino_dt(self, T_gam, T_nu, T_ds):
+        #hack for now
+        
+        if T_gam >= 3:
+            return self.dT_EM_dt(T_gam, T_nu, T_ds)
+            
         H = Hubble(T_gam, T_nu, T_ds, self.m_mcp)
         
         hub_term = -4*H*(rho_nuetrino(T_nu))
@@ -108,6 +114,11 @@ class Boltzmann:
         return (1/drho_nuetrino_dT(T_nu))*(hub_term + col_term)
         
     def dT_nuetrino_dt_SM(self, T_gam, T_nu):
+        #hack for now
+        
+        if T_gam >= 3:
+            return self.dT_EM_dt_SM(T_gam, T_nu)
+        
         H = Hubble_SM(T_gam, T_nu)
         
         hub_term = -4*H*(rho_nuetrino(T_nu))
@@ -181,8 +192,8 @@ class Boltzmann:
         def dT(t, vec):
             T_gam, T_nu = vec
             res = np.array([
-                self.dT_EM_dt_SM(T_gam, T_nu)[0],
-                self.dT_nuetrino_dt_SM(T_gam, T_nu)[0],
+                self.dT_EM_dt_SM(T_gam, T_nu),
+                self.dT_nuetrino_dt_SM(T_gam, T_nu),
             ]
             )
             return res
