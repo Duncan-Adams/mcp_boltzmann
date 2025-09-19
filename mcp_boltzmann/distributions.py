@@ -137,6 +137,16 @@ def n_MB(T, mu, m):
     res[mask] = n_nonrel(T[mask],mu[mask],m)
     res[~mask] = m**2*T[~mask]*np.exp(mu[~mask]/T[~mask])*kn(2, m/T[~mask])/(2*np.pi**2)
     return res
+    
+def n_BE(T, mu, m, g=2):
+    T = np.atleast_1d(T)
+    mu = np.atleast_1d(mu)
+    x = mu/T    
+    mask = T < m/tm_ratio_threshold
+    res = np.empty_like(T)
+    res[mask] = g * n_nonrel(T[mask],mu[mask],m)
+    res[~mask] = g * (T[~mask]**3/(2*np.pi**2))*np.exp(x[~mask]) * n_BE_integral(m/T[~mask])
+    return res
 
 ####################
 # Energy Densities #
