@@ -12,6 +12,7 @@ s2_theta_w = 0.22339
 tan2_theta_w = s2_theta_w/(1 - s2_theta_w)
 
 LQCD = 200 #temperature of QCD phase transition
+T_EW = 160*1e3 #temperature of electroweak phase transition
 
 m_e = 0.511
 m_mu = 105.0
@@ -67,6 +68,8 @@ def C_plasmon(T_sm, T_ds, m_mcp, Q_mcp):
     
 
 def Gamma_Z_xx(m_mcp, Q_mcp):
+    #we probably dont care about running of alpha even though its O(10%) larger at M_Z
+    
     pref = Q_mcp**2*alpha*tan2_theta_w/3
     arg_sqrt = np.nan_to_num((1 - 4*m_mcp**2/M_Z**2))
     sq = np.sqrt(arg_sqrt*np.heaviside(arg_sqrt, 0))
@@ -75,4 +78,4 @@ def Gamma_Z_xx(m_mcp, Q_mcp):
     
 
 def C_Z_decay(T_sm, T_ds, m_mcp, Q_mcp):
-    return Gamma_Z_xx(m_mcp, Q_mcp)*M_Z*(n_BE(T_sm, np.zeros_like(T_sm), M_Z, g=3.0) - n_BE(T_ds, np.zeros_like(T_ds), M_Z, g=3.0))
+    return Gamma_Z_xx(m_mcp, Q_mcp)*M_Z*(n_BE(T_sm, np.zeros_like(T_sm), M_Z, g=3.0) - n_BE(T_ds, np.zeros_like(T_ds), M_Z, g=3.0))*np.heaviside(T_EW - T_sm, 0)
