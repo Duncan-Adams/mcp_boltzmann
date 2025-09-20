@@ -8,8 +8,9 @@ from mcp_boltzmann.distributions import n_gam, n_BE
 #fundamental constants
 alpha = 1.0/137.0
 s2_theta_w = 0.22339 
+c2_theta_w = 1-s2_theta_w
 
-tan2_theta_w = s2_theta_w/(1 - s2_theta_w)
+tan2_theta_w = s2_theta_w/(c2_theta_w)
 
 LQCD = 200 #temperature of QCD phase transition
 T_EW = 160*1e3 #temperature of electroweak phase transition
@@ -55,6 +56,23 @@ def m_gam_2(T_sm):
 
     return (4*alpha/np.pi)*T_sm**2*(qed + qcd*np.heaviside(T_sm - LQCD, 0))
 
+##TODO implement B Bosn decay
+def m_B_2(T_sm):
+    '''
+    Compute B boson thermal mass as a function of temperature
+    
+    Parameters
+    ----------
+    T_sm - standard model temperature in MeV
+    
+    Returns
+    -------
+    m_B_2 (float) - square of the B boson thermal mass
+    '''
+    
+    return (11*alpha*np.pi/(3*c2_theta_w))*T_sm**2
+
+
 #plasmon decay collision integral
 def C_plasmon(T_sm, T_ds, m_mcp, Q_mcp):
     #it looks like 2206.13530 didnt include the factor of 2 in the definition of n_gamma, otherwise they have a spurious factor
@@ -65,6 +83,29 @@ def C_plasmon(T_sm, T_ds, m_mcp, Q_mcp):
     sq = np.sqrt(arg_sqrt*np.heaviside(arg_sqrt, 0))
 
     return ((1/3)*alpha*Q_mcp**2)*(mg2 + 2*m_mcp**2)*sq*(n_gam(T_sm) - n_gam(T_ds))
+    
+def C_B_decay(T_sm, T_ds, m_mcp, Q_mcp):
+    '''
+    Compute B boson decay collision term
+    
+    Parameters
+    ----------
+    T_sm - standard model temperature in MeV
+    T_ds - dark sector temperature in MeV
+    m_mcp - millicharged particle mass in MeV
+    Q_MCP - millicharge (dimensionless)
+    
+    Returns
+    -------
+    (float) - collision term from B boson decay in MeV^5
+    '''
+    mB2 = m_B_2(T_sm)
+    
+    arg_sqrt = np.nan_to_num((1 - 4*m_mcp**2/mB2))
+    sq = np.sqrt(arg_sqrt*np.heaviside(arg_sqrt, 0))
+    
+    return ((2/3)*alpha*Q_mcp**2/c2_theta_w**2)*(mB2 + 2*m_mcp**2)*(n_gam(T_sm) - n_gam(T_ds)) #I think its okay to use n_gam assuming massless distribtution since m_B ~ 0.1 T
+
     
 
 def Gamma_Z_xx(m_mcp, Q_mcp):
