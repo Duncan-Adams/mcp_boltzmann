@@ -56,7 +56,6 @@ def m_gam_2(T_sm):
 
     return (4*alpha/np.pi)*T_sm**2*(qed + qcd*np.heaviside(T_sm - LQCD, 0))
 
-##TODO implement B Bosn decay
 def m_B_2(T_sm):
     '''
     Compute B boson thermal mass as a function of temperature
@@ -104,7 +103,7 @@ def C_B_decay(T_sm, T_ds, m_mcp, Q_mcp):
     arg_sqrt = np.nan_to_num((1 - 4*m_mcp**2/mB2))
     sq = np.sqrt(arg_sqrt*np.heaviside(arg_sqrt, 0))
     
-    return ((2/3)*alpha*Q_mcp**2/c2_theta_w**2)*(mB2 + 2*m_mcp**2)*(n_gam(T_sm) - n_gam(T_ds)) #I think its okay to use n_gam assuming massless distribtution since m_B ~ 0.1 T
+    return ((1/3)*alpha*Q_mcp**2/c2_theta_w**2)*(mB2 + 2*m_mcp**2)*(n_gam(T_sm) - n_gam(T_ds)) #I think its okay to use n_gam assuming massless distribtution since m_B ~ 0.1 T
 
     
 
