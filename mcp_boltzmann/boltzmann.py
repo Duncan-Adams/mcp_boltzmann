@@ -125,7 +125,7 @@ class Boltzmann:
     def dT_neutrino_dt_SM(self, T_gam, T_nu):
         #hack for now
         
-        if T_gam >= 1:
+        if T_gam >= 10:
             return self.dT_EM_dt_SM(T_gam, T_nu)
         
         H = Hubble_SM(T_gam, T_nu)
@@ -212,7 +212,7 @@ class Boltzmann:
         t_max = 1e29
         t_eval = np.geomspace(t0, t_max, 500)
         
-        sol = solve_ivp(dT, [t0, t_max], IC, t_eval=t_eval, method='BDF', rtol=1e-5, atol=1e-6)
+        sol = solve_ivp(dT, [t0, t_max], IC, t_eval=t_eval, method='BDF', rtol=1e-5, atol=1e-5)
         
         return sol
             
@@ -221,4 +221,8 @@ class Boltzmann:
 
     def N_eff_SM(self, T_gam, T_nu):
         return (8/7)*(11/4)**(4/3)*((rho_neutrino(T_nu)/rho_EM(T_gam)))
+        
+    #compute delta Neff only conisdering the temperature of the dark photons and photons
+    def Delta_Neff_ds_only(self, T_gam, T_ds, m_mcp):
+        return (8/7)*(11/4)**(4/3)*(rho_DS(T_ds, m_mcp)/rho_EM(T_gam))
         
