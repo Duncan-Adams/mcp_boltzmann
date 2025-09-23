@@ -101,6 +101,22 @@ def save_results(task_result):
         
         plt.savefig(os.path.join(result_dir, 'temp_ratio.png'))
         plt.cla()
+        ################################################################################################################
+        plt.plot(sol_bsm.y[0], Boltz.colterms_EM_DS[0](sol_bsm.y[0], sol_bsm.y[2], Q)/sol_bsm.y[0]**6, label='annihilation')
+        plt.plot(sol_bsm.y[0], Boltz.colterms_EM_DS[1](sol_bsm.y[0], sol_bsm.y[2], Q)/sol_bsm.y[0]**6, label='scattering')
+        plt.plot(sol_bsm.y[0], Boltz.colterms_EM_DS[2](sol_bsm.y[0], sol_bsm.y[2], Q)/sol_bsm.y[0]**6, label='Plasmon Decay')
+        plt.plot(sol_bsm.y[0], Boltz.colterms_EM_DS[3](sol_bsm.y[0], sol_bsm.y[2], Q)/sol_bsm.y[0]**6, label='Z decay')
+        plt.xscale('log')
+        plt.yscale('log')
+        plt.ylim(1e-27, 1e-22)
+        plt.gca().invert_xaxis()
+        
+        plt.xlabel('Time [MeV$^{-1}$]')
+        plt.title(r'C/$T^6_\gamma$ [MeV$^{-1}$]')
+        plt.legend()
+        
+        plt.savefig(os.path.join(result_dir, 'rates.png'))
+        plt.cla()
         
     return 
         

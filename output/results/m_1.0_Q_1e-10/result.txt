@@ -1,6 +1,6 @@
 m_mcp=1.0
 Q=1e-10
-N_eff_sm=2.993439305795515
+N_eff_sm=3.07246071112539
 N_eff_bsm=array([3.07089794])
 DNeff_dso=array([0.00023563])
-Delta_Neff=array([0.07745863])
+Delta_Neff=array([-0.00156277])

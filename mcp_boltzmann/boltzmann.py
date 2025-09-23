@@ -125,7 +125,7 @@ class Boltzmann:
     def dT_neutrino_dt_SM(self, T_gam, T_nu):
         #hack for now
         
-        if T_gam >= 10:
+        if T_gam >= 1:
             return self.dT_EM_dt_SM(T_gam, T_nu)
         
         H = Hubble_SM(T_gam, T_nu)
