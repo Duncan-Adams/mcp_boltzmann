@@ -1,6 +1,7 @@
 import numpy as np
 import scipy.special as sps
 from mpmath import fp as fp
+import dill
 import vegas
 from functools import partial
 
@@ -203,13 +204,13 @@ class ElasticCollisionIntegral:
 
         return resvec
 
-    def compute_MB(self, T_a, T_b, n_strat=([3] + [3]), neval=1e4, nitn=30):
+    def compute_MB(self, T_a, T_b, n_strat=([3] + [3]), neval=1e4, nitn=30, nproc=1):
         integrand = vegas.batchintegrand(partial(self.vegas_integrand_MB, T_a, T_b))
 
         integ = vegas.Integrator([[0.0, 1.0], [0.0, 1.0]])
 
-        train = integ(integrand, nitn=nitn, nstrat=n_strat, neval=neval)
-        int_result = integ(integrand, nitn=10, nstrat=n_strat, neval=neval)
+        train = integ(integrand, nitn=nitn, nstrat=n_strat, neval=neval, nproc=nproc)
+        int_result = integ(integrand, nitn=10, nstrat=n_strat, neval=neval, nproc=nproc)
 
         pref = 4*T_a*T_b*((32*np.pi**2)/(2**7*(2*np.pi)**8))
 
@@ -218,13 +219,13 @@ class ElasticCollisionIntegral:
 
         return (res, sdev, int_result.Q, int_result)
 
-    def compute_QS(self, T_a, T_b, n_strat=([3] + [3]), neval=1e4, nitn=30):
+    def compute_QS(self, T_a, T_b, n_strat=([3] + [3]), neval=1e4, nitn=30, nproc=1):
         integrand = vegas.batchintegrand(partial(self.vegas_integrand_QS, T_a, T_b))
 
         integ = vegas.Integrator([[0.0, 1.0], [0.0, 1.0]])
 
-        train = integ(integrand, nitn=nitn, nstrat=n_strat, neval=neval)
-        int_result = integ(integrand, nitn=10, nstrat=n_strat, neval=neval)
+        train = integ(integrand, nitn=nitn, nstrat=n_strat, neval=neval, nproc=nproc)
+        int_result = integ(integrand, nitn=10, nstrat=n_strat, neval=neval, nproc=nproc)
 
         pref = 4*T_a*T_b*((32*np.pi**2)/(2**7*(2*np.pi)**8))
 

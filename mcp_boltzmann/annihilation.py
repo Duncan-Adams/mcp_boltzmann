@@ -25,6 +25,9 @@ e = 0.302822
 Gamma_rhopipi = 149.1 * MeV
 m_rho = 775.26 * MeV
 
+s2_theta_w = 0.22339 
+c2_theta_w = 1-s2_theta_w
+
 
 #G function define in equation C.18 of Adshead, Ralengenkar, & Shelton (2206.13530)
 _base_path = os.path.dirname(os.path.abspath(__file__))
@@ -72,6 +75,22 @@ def sigma_llff(s, m_mcp, m_l):
     pi = np.sqrt(Ei**2 - m_l**2)
     pf = np.sqrt(Ef**2 - m_mcp**2)
     return 4 * e**4 * Ql**2 * (2 * np.pi) / ((8 * np.pi)**2 ) * (1/s) * (pf/pi) * (8/3 + (32 * m_mcp**2 * m_l**2) / (3 * s**2) + (16 *(m_mcp**2 + m_l**2)) / (3 * s))
+
+# includes contribution from Z boson mediated annihilation, with the on shell Z piece subtracted off  see eq A.3 of 2206.13530
+def sigma_llff_Z_boson(s, m_mcp, m_f, q_f, cv, ca):
+    #Kinematics
+    M_z = 91.1880*1e3
+    Ei = np.sqrt(s)/2
+    Ef = Ei
+    pi = np.sqrt(Ei**2 - m_f**2)
+    pf = np.sqrt(Ef**2 - m_mcp**2)
+    
+    prefactor = 4 * e**4 * (2 * np.pi) / ((8 * np.pi)**2 )
+    photon_med = q_f**2*(4/3)*(2*m_mcp**2 + s)*(2*m_f**2 + s)
+    Z_med = -np.heaviside(s - M_z**2, 0)*(s + 2*m_mcp**2)*m_f**2*(cv**2 + 3*ca**2)/(2*c2_theta_w**2)
+    interference = np.heaviside(s - M_z**2, 0)*( (cv**2 + ca**2)/(4*c2_theta_w) - cv*q_f/c2_theta_w ) #I think only the second term in here is actuallu interference but w/e
+    
+    return prefactor * (1/s**3) * (pf/pi) * (photon_med + Z_med + interference)
 
 #form factor for pion
 def F_pi(s):
