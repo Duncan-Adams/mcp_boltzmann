@@ -24,6 +24,7 @@ e = 0.302822
 
 Gamma_rhopipi = 149.1 * MeV
 m_rho = 775.26 * MeV
+m_pi = 139.570 * MeV
 
 s2_theta_w = 0.22339 
 c2_theta_w = 1-s2_theta_w
@@ -39,6 +40,10 @@ _G_fermion_interp = interp1d(
     bounds_error=False, 
     fill_value=0
 )
+
+def load_ann_rate(path):
+    with np.load(path) as rate_file:
+        return interp1d(rate_file['Temp_grid'], rate_file['rate'], bounds_error=False, fill_value=0)
 
 def _G_fermi_small_x(x):
     return np.log(2)*(np.pi**2)/(6*x**2)
@@ -100,11 +105,19 @@ def F_pi(s):
 def M2_pipiff(s,c2, m_f):
     return 2 * e**4 * np.abs(F_pi(s))**2 * (1/s**2) * (s**2 * (1-c2) + 4 * s * (m_f**2 * c2 - m_pi**2 * (1 - c2)) - 16 * m_f**2 * m_pi**2 * c2)
 
-def sigma_pipiff(s, m_f):
+# ~ def sigma_pipiff(s, m_mcp):
+    # ~ #other factors in sigma? Check. 
+    # ~ return 2 * e**4 * np.abs(F_pi(s))**2 * (4/3 - (32 * m_mcp**2 * m_pi**2)/(3 * s**2) + (8 * m_mcp**2)/(3 * s) - (16 * m_pi**2)/(3 * s))
+    
+def sigma_pipiff(s, m_mcp):
     #other factors in sigma? Check. 
-    return 2 * e**4 * np.abs(F_pi(s))**2 * (4/3 - (32 * m_f**2 * m_pi**2)/(3 * s**2) + (8 * m_f**2)/(3 * s) - (16 * m_pi**2)/(3 * s))
+    Ei = np.sqrt(s)/2
+    Ef = Ei
+    pi = np.sqrt(Ei**2 - m_pi**2)
+    pf = np.sqrt(Ef**2 - m_mcp**2)
+    return e**4 * np.abs(F_pi(s))**2 * (pf/pi) * (s - 4*m_pi**2) * (s + 2*m_mcp**2) / (24*np.pi * s**3)
         
-def I_integrand(lns,sigma_func,m_l, T):#log-space
+def I_integrand(lns,sigma_func, m_l, T):#log-space
     s=np.exp(lns)
     dlns = s
     z = np.sqrt(s)/T
