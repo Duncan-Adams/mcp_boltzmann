@@ -6,8 +6,8 @@ import numpy as np
 
 
 base_dir = os.path.dirname(os.path.realpath(__file__))
-QED_dir = os.path.join(base_dir, 'QED/')
-rates_dir = os.path.join(base_dir, 'SM_Rates/')
+QED_dir = os.path.join(base_dir, '../input/QED/')
+rates_dir = os.path.join(base_dir, '../input/SM_Rates/')
 
 # Conversion factor to convert MeV^-1 into seconds
 FAC = 1./(6.58212e-22)

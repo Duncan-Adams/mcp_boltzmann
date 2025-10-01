@@ -24,7 +24,7 @@ def Li3(x):
     return x + x**2/8 + x**3/27 + x**4/64 + x**5/125 + x**6/216
     
     
-#Approximations based on a stitching together of power series and asymptotic expansions
+#Approximations based on a stitching together of power series and asymptotic expansions of Lin(-exp(x))
 def Lie2(x):
     return np.where(
         x<=1, 

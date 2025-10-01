@@ -197,7 +197,7 @@ def p_DM_FD(T, mu, mDM):
     mask = T < mDM/tm_ratio_threshold
     res = np.empty_like(T)
     res[mask] = gDM * T[mask] * n_nonrel(T[mask],mu[mask],mDM)
-    res[~mask] = gDM * (T[~mask]**4/(6*np.pi**2))*np.exp(x[~mask]) * p_FD_integral(mDM/T[~mask])
+    res[~mask] = gDM * (T[~mask]**4/(6*np.pi**2))*np.exp(x[~mask]) * p_FD_integral(mDM/T[~mask]) # i think this is wrong but works at zero chemical potential
     return res
 
 def p_DM_BE(T, mu, mDM):

@@ -28,6 +28,9 @@ q_u = 2/3
 q_d = -1/3
 q_s = -1/3
 q_c = 2/3
+q_b = -1/3
+q_t = 2/3
+
 
 M_Z = 91188.0 #MeV
 
@@ -48,11 +51,20 @@ def m_gam_2(T_sm):
     x_d = m_d/T_sm
     x_s = m_s/T_sm
     x_c = m_c/T_sm
+    x_b = m_b/T_sm
+    x_t = m_t/T_sm
 
     #summing over spin states only gives a factor of 2, as the derivation of A.8 in 2206.13530 (which is really from a textbook) 
     #assumes that f_p is the sum of particle anti particle pairs
     qed = 2*(mgamma_int(x_e) + mgamma_int(x_mu) + mgamma_int(x_tau))
-    qcd = 3*2*(q_u**2*mgamma_int(x_u) + q_d**2*mgamma_int(x_d) + q_s**2*mgamma_int(x_s) + q_c**2*mgamma_int(x_c))
+    qcd = 3*2*(
+        q_u**2*mgamma_int(x_u) 
+      + q_d**2*mgamma_int(x_d)
+      + q_s**2*mgamma_int(x_s) 
+      + q_c**2*mgamma_int(x_c)
+      + q_b**2*mgamma_int(x_b)
+      + q_t**2*mgamma_int(x_t)
+      )
 
     return (4*alpha/np.pi)*T_sm**2*(qed + qcd*np.heaviside(T_sm - LQCD, 0))
 
@@ -82,6 +94,14 @@ def C_plasmon(T_sm, T_ds, m_mcp, Q_mcp):
     sq = np.sqrt(arg_sqrt*np.heaviside(arg_sqrt, 0))
 
     return ((1/3)*alpha*Q_mcp**2)*(mg2 + 2*m_mcp**2)*sq*(n_gam(T_sm) - n_gam(T_ds))
+    
+def C_plasmon_forwards(T_sm, m_mcp, Q_mcp):
+    mg2 = m_gam_2(T_sm)
+    
+    arg_sqrt = np.nan_to_num((1 - 4*m_mcp**2/mg2)) #this is fine b/c arg_sqrt will nan wehn mgam=0, but this will cause the whole rate to evaluate to 0, which it should at mgam=0
+    sq = np.sqrt(arg_sqrt*np.heaviside(arg_sqrt, 0))
+
+    return ((1/3)*alpha*Q_mcp**2)*(mg2 + 2*m_mcp**2)*sq*n_gam(T_sm) 
     
 def C_B_decay(T_sm, T_ds, m_mcp, Q_mcp):
     '''

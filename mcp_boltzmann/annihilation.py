@@ -109,7 +109,7 @@ def M2_pipiff(s,c2, m_f):
     # ~ #other factors in sigma? Check. 
     # ~ return 2 * e**4 * np.abs(F_pi(s))**2 * (4/3 - (32 * m_mcp**2 * m_pi**2)/(3 * s**2) + (8 * m_mcp**2)/(3 * s) - (16 * m_pi**2)/(3 * s))
     
-def sigma_pipiff(s, m_mcp):
+def sigma_pipi_ff(s, m_mcp):
     #other factors in sigma? Check. 
     Ei = np.sqrt(s)/2
     Ef = Ei

@@ -124,7 +124,6 @@ def compute_coulomb_rate(temps, mass, n_strat, neval, nitn):
     
     LQCD = 200
     
-    time_start = time.time()
     rate_funs = setup_coulomb_integrals(mass, mgamma_thermal)
     rate_int_e = rate_funs['rate_e']
     rate_int_mu = rate_funs['rate_mu']
@@ -133,7 +132,6 @@ def compute_coulomb_rate(temps, mass, n_strat, neval, nitn):
     rate_int_strange = rate_funs['rate_strange']
     rate_int_charm = rate_funs['rate_charm']
 
-    
     
     result_e = 0.0
     result_mu = 0.0
@@ -168,11 +166,91 @@ def compute_coulomb_rate(temps, mass, n_strat, neval, nitn):
     pref_charm = 4*3*16*np.pi*e**4*(q_c**2)
     
     result_total = pref_lept*(result_e + result_mu + result_tau) + pref_lq*(result_lq) + pref_charm*result_charm + pref_strange*result_strange
-    time_end = time.time()
-    print(f'Time to compute integral: {(time_end - time_start)} seconds')
     
     return result_total
+
+
+def compute_coulomb_rate_forwards(temps, mass, n_strat, neval, nitn):
+    '''
+    Compute coulomb scattering collision integral with sm fermions for an mcp of mass M at millicharge = 1.0
     
+    Parameters
+    ----------
+    mass - mass [MeV] of mcp
+    temps - tuple of (T_sm, T_ds) [MeV, MeV]
+    n_strat - number of stratifications for vegas integrator
+    neval - number of evaluations for vegas integrator
+    nitn - number of iterations for vegas integrator
+    
+    Returns
+    -------
+    (float) sum of collision integrals for coulomb scattering with each sm fermion
+    '''
+    
+    warnings.filterwarnings('ignore')
+    
+    T_sm = temps[0]
+    T_ds = temps[1]
+    
+
+    #setup up callable that computes photon plasma mass
+    mgamma_thermal = lambda T_sm, T_ds: np.sqrt(plas.m_gam_2(T_sm))
+    
+    #setup coulomb integrals
+    m_e = 0.511
+    m_mu = 105
+    m_tau = 1776
+    m_s = 95
+    m_c = 1270
+    m_mcp = mass
+    
+    LQCD = 200
+    
+    rate_funs = setup_coulomb_integrals(mass, mgamma_thermal)
+    rate_int_e = rate_funs['rate_e']
+    rate_int_mu = rate_funs['rate_mu']
+    rate_int_tau = rate_funs['rate_tau']
+    rate_int_lq = rate_funs['rate_lq']
+    rate_int_strange = rate_funs['rate_strange']
+    rate_int_charm = rate_funs['rate_charm']
+
+    
+    result_e = 0.0
+    result_mu = 0.0
+    result_tau = 0.0
+    result_lq = 0.0
+    result_strange = 0.0
+    result_charm = 0.0
+            
+
+    result_e = rate_int_e.compute_QS_forwards(T_sm, T_ds, n_strat=n_strat, neval=neval, nitn=nitn)[0]
+    result_mu = rate_int_mu.compute_QS_forwards(T_sm, T_ds, n_strat=n_strat, neval=neval, nitn=nitn)[0]
+    result_tau = rate_int_tau.compute_QS_forwards(T_sm, T_ds, n_strat=n_strat, neval=neval, nitn=nitn)[0]
+        
+    if T_sm > LQCD:
+        result_lq = rate_int_lq.compute_QS_forwards(T_sm, T_ds, n_strat=n_strat, neval=neval, nitn=nitn)[0]
+        result_strange = rate_int_strange.compute_QS_forwards(T_sm, T_ds, n_strat=n_strat, neval=neval, nitn=nitn)[0]
+        result_charm = rate_int_charm.compute_QS_forwards(T_sm, T_ds, n_strat=n_strat, neval=neval, nitn=nitn)[0]
+            
+    #compute prefactors, dont include millicharge since all processes rescale with the millicharge
+    alpha = 1.0/137.0
+    e = np.sqrt(4*alpha*np.pi)
+    
+    q_u = 2/3
+    q_d = -1/3
+    q_s = -1/3
+    q_c = 2/3   
+    
+    #factor to scale the coeeficients by
+    pref_lept = 4*16*np.pi*e**4
+    pref_lq = 4*3*16*np.pi*e**4*(q_u**2 + q_d**2)
+    pref_strange = 4*3*16*np.pi*e**4*(q_s**2)
+    pref_charm = 4*3*16*np.pi*e**4*(q_c**2)
+    
+    result_total = pref_lept*(result_e + result_mu + result_tau) + pref_lq*(result_lq) + pref_charm*result_charm + pref_strange*result_strange
+
+    return result_total
+
 if __name__ == "__main__":
     __spec__ = None
 
@@ -184,6 +262,7 @@ if __name__ == "__main__":
     parser.add_argument('Tm_min', action='store', type=float, help='minimum T in units of mass to compute rates at')
     parser.add_argument('Tm_max', action='store', type=float, help='maximum T in units of mass to compute rates at')
     parser.add_argument('n_temps', action='store', type=int, help='number of temperatures in temperature grid')
+    parser.add_argument('--forwards', action='store_true', help='compute forwards rate only')
     parser.add_argument('--outdir', dest='outdir', action='store', default='./', type=str)
     parser.add_argument('--overwrite', dest='overwrite', action='store_true')
 
@@ -199,8 +278,12 @@ if __name__ == "__main__":
         os.makedirs(args.outdir, exist_ok=True)
         
     outfile_name = f'mcp_coulomb_rate_m_{args.mass}_Q_1.npz'
+    
+    if args.forwards is True:
+        outfile_name = f'mcp_coulomb_rate_m_{args.mass}_Q_1_F.npz'
     outfile_path = os.path.join(args.outdir, outfile_name)
     
+
     if (args.overwrite is False) and os.path.exists(outfile_path):
         print(f'{outfile_path} already exists . . . skipping')
         exit()
@@ -213,6 +296,15 @@ if __name__ == "__main__":
         nitn=10
     )
     
+    if args.forwards is True:
+        fun_loop = partial(
+            compute_coulomb_rate_forwards, 
+            mass=args.mass,
+            n_strat=([3]+[3]), 
+            neval=1e3, 
+            nitn=10
+        )
+    
     T_min = args.mass*args.Tm_min
     T_max = args.mass*args.Tm_max
     Temp_grid = np.geomspace(T_min, T_max, args.n_temps)
@@ -223,8 +315,6 @@ if __name__ == "__main__":
         for Tj in Temp_grid:
             temp_grid_2d.append([Ti,Tj])
             
-
-
     pool = schwimmbad.choose_pool(mpi=args.mpi, processes=args.n_cores)
     
     time_start = time.time()

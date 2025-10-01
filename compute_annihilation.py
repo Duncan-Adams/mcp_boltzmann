@@ -11,7 +11,7 @@ from scipy.interpolate import interp1d
 import mcp_boltzmann.annihilation as ann
 
     
-def compute_annihilation_rate(m_mcp, Tm_min, Tm_max, n_temps, outdir, maxwell_boltzmann=False):
+def compute_annihilation_rate(m_mcp, T_min, T_max, n_temps, outdir, maxwell_boltzmann=False):
     '''
     Compute forwards annhilation collision integral (sm, sm -> mcp, mcp)
     
@@ -40,6 +40,7 @@ def compute_annihilation_rate(m_mcp, Tm_min, Tm_max, n_temps, outdir, maxwell_bo
     m_c = 1270*MeV
     m_b = 4180*MeV
     m_t = 172.76*GeV
+    m_pi = 139.570 * MeV
     Q = 1.0
     
     outfile_name = f'mcp_annihilation_rate_m_{args.mass}_Q_1.npz'
@@ -51,9 +52,6 @@ def compute_annihilation_rate(m_mcp, Tm_min, Tm_max, n_temps, outdir, maxwell_bo
         print(f'{outfile_path} already exists . . . skipping')
         return
 
-    
-    T_min = args.mass*Tm_min
-    T_max = args.mass*Tm_max
     Temp_grid = np.geomspace(T_min, T_max, n_temps)
 
     #setup cross sections
@@ -66,6 +64,8 @@ def compute_annihilation_rate(m_mcp, Tm_min, Tm_max, n_temps, outdir, maxwell_bo
     sigma_cc_ff = partial(ann.sigma_llff, m_mcp = m_mcp, m_l = m_c)
     sigma_bb_ff = partial(ann.sigma_llff, m_mcp = m_mcp, m_l = m_b)
     sigma_tt_ff = partial(ann.sigma_llff, m_mcp = m_mcp, m_l = m_t)
+
+    sigma_pipi_ff = partial(ann.sigma_pipi_ff, m_mcp = m_mcp)
 
     if maxwell_boltzmann is True:
         Ix_table_e = np.array(
@@ -101,7 +101,7 @@ def compute_annihilation_rate(m_mcp, Tm_min, Tm_max, n_temps, outdir, maxwell_bo
         )
         
         Ix_table_pipi = np.array(
-            [ann.Ix(sigma_pipi_ff, m_mcp, m_pi, T) for T in T_int]
+            [ann.Ix(sigma_pipi_ff, m_mcp, m_pi, T) for T in Temp_grid]
         )
         
     else:
@@ -138,13 +138,14 @@ def compute_annihilation_rate(m_mcp, Tm_min, Tm_max, n_temps, outdir, maxwell_bo
         )
         
         Ix_table_pipi = np.array(
-            [ann.Ix(sigma_pipi_ff, m_mcp, m_pi, T) for T in T_int]
+            [ann.Ix(sigma_pipi_ff, m_mcp, m_pi, T) for T in Temp_grid]
         )
     
     
     LQCD = 200*MeV
     rate_EM = Ix_table_e + Ix_table_mu + Ix_table_tau
     rate_qcd = np.heaviside(Temp_grid - LQCD, 0)*(Ix_table_lq + Ix_table_strange + Ix_table_charm + Ix_table_bot + Ix_table_top)
+    rate_had = np.heaviside(LQCD - Temp_grid, 0)*Ix_table_pipi
     rate_tot = rate_EM + rate_qcd
     
     np.savez_compressed(
@@ -163,8 +164,8 @@ if __name__ == "__main__":
                     description='tabulateannihilation scattering rates for MCPs')
 
     parser.add_argument('mass', action='store', type=float, help='mass in MeV of mcp')
-    parser.add_argument('Tm_min', action='store', type=float, help='minimum T in units of mass to compute rates at')
-    parser.add_argument('Tm_max', action='store', type=float, help='maximum T in units of mass to compute rates at')
+    parser.add_argument('T_min', action='store', type=float, help='minimum T [MeV] to compute rate at')
+    parser.add_argument('T_max', action='store', type=float, help='minimum T [MeV] to compute rate at')
     parser.add_argument('n_temps', action='store', type=int, help='number of temperatures in temperature grid')
     parser.add_argument('--maxwell_boltzmann', dest='maxwell_boltzmann', action='store_true', help='assume MB distributions')
     parser.add_argument('--outdir', dest='outdir', action='store', default='./', type=str)
@@ -183,8 +184,8 @@ if __name__ == "__main__":
         
     fun_loop = partial(
         compute_annihilation_rate, 
-        Tm_min = args.Tm_min,
-        Tm_max = args.Tm_max,
+        T_min = args.T_min,
+        T_max = args.T_max,
         n_temps= args.n_temps,
         outdir = args.outdir,
         maxwell_boltzmann = args.maxwell_boltzmann

@@ -139,6 +139,12 @@ class ElasticCollisionIntegral:
             +np.power(np.expm1(p0/T_a), -1)*np.power(-np.expm1(-p0/T_b), -1)
             -np.power(np.expm1(p0/T_b), -1)*np.power(-np.expm1(-p0/T_a), -1)
         )
+        
+    def integrand_p0_QS_F(self, p0, T_a, T_b):
+        return p0*(
+            +np.power(np.expm1(p0/T_a), -1)*np.power(-np.expm1(-p0/T_b), -1)
+        )
+
 
     def phase_space(self, p, p0):
         #restrict the integration region of p to be greater than p0
@@ -170,11 +176,17 @@ class ElasticCollisionIntegral:
         
         J = min(T_a, T_b)**2*(1/(1-z_p))**2*(1/(1-z_p0))**2
 
-        r = J*self.integrand_p0_QS(p0, T_a, T_b)*self.integrand_p_QS(p, p0, T_a, T_b)
-
-        sel = np.where(np.isnan(r))
-
         return J*self.integrand_p0_QS(p0, T_a, T_b)*self.integrand_p_QS(p, p0, T_a, T_b)
+        
+    def vegas_integrand_helper_QS_F(self, T_a, T_b, z):
+        z_p, z_p0 = np.transpose(z)
+        
+        p = min(T_a, T_b)*(z_p/(1-z_p))
+        p0 = min(T_a, T_b)*(z_p0/(1-z_p0))
+        
+        J = min(T_a, T_b)**2*(1/(1-z_p))**2*(1/(1-z_p0))**2
+
+        return J*self.integrand_p0_QS_F(p0, T_a, T_b)*self.integrand_p_QS(p, p0, T_a, T_b)
 
     def vegas_integrand_MB(self, T_a, T_b, z):
         z_p, z_p0 = np.transpose(z)
@@ -203,6 +215,20 @@ class ElasticCollisionIntegral:
         resvec[eval_ind] = self.vegas_integrand_helper_QS(T_a, T_b, z[eval_ind])
 
         return resvec
+        
+    def vegas_integrand_QS_forwards(self, T_a, T_b, z):
+        z_p, z_p0 = np.transpose(z)
+        
+        resvec = np.zeros(len(z))
+        ps = self.vegas_phase_space(T_a, T_b, z)
+
+        eval_ind = np.where(ps > 0)
+        if(len(eval_ind[0]) == 0):
+            return resvec
+
+        resvec[eval_ind] = self.vegas_integrand_helper_QS_F(T_a, T_b, z[eval_ind])
+
+        return resvec
 
     def compute_MB(self, T_a, T_b, n_strat=([3] + [3]), neval=1e4, nitn=30, nproc=1):
         integrand = vegas.batchintegrand(partial(self.vegas_integrand_MB, T_a, T_b))
@@ -221,6 +247,21 @@ class ElasticCollisionIntegral:
 
     def compute_QS(self, T_a, T_b, n_strat=([3] + [3]), neval=1e4, nitn=30, nproc=1):
         integrand = vegas.batchintegrand(partial(self.vegas_integrand_QS, T_a, T_b))
+
+        integ = vegas.Integrator([[0.0, 1.0], [0.0, 1.0]])
+
+        train = integ(integrand, nitn=nitn, nstrat=n_strat, neval=neval, nproc=nproc)
+        int_result = integ(integrand, nitn=10, nstrat=n_strat, neval=neval, nproc=nproc)
+
+        pref = 4*T_a*T_b*((32*np.pi**2)/(2**7*(2*np.pi)**8))
+
+        res = pref*int_result.mean
+        sdev = pref*int_result.sdev
+
+        return (res, sdev, int_result.Q, int_result)
+        
+    def compute_QS_forwards(self, T_a, T_b, n_strat=([3] + [3]), neval=1e4, nitn=30, nproc=1):
+        integrand = vegas.batchintegrand(partial(self.vegas_integrand_QS_forwards, T_a, T_b))
 
         integ = vegas.Integrator([[0.0, 1.0], [0.0, 1.0]])
 
