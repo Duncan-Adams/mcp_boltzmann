@@ -12,6 +12,9 @@ c2_theta_w = 1-s2_theta_w
 
 tan2_theta_w = s2_theta_w/(c2_theta_w)
 
+GeV = 1e3
+MeV = 1.0
+
 LQCD = 200 #temperature of QCD phase transition
 T_EW = 160*1e3 #temperature of electroweak phase transition
 
@@ -23,6 +26,9 @@ m_u = 2.2
 m_d = 4.7
 m_s = 95.0
 m_c = 1270.0
+
+m_b = 4180
+m_t = 172.76*GeV
 
 q_u = 2/3
 q_d = -1/3

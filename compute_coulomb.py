@@ -11,73 +11,38 @@ from scipy.interpolate import interp1d
 import mcp_boltzmann.elastic_scattering as elscat
 import mcp_boltzmann.plasma as plas
 
-def setup_coulomb_integrals(mass, mgam):
+def _setup_int(m_mcp, m_f, mgam):
+    elcol = elscat.ElasticCollisionIntegral(m_f, m_mcp, mgam, zeta_a=1, zeta_b=1)
+    elcol.matrix_element_nml['c222'] = 0.75
+    elcol.matrix_element_nml['c002'] = 0.75
+    elcol.matrix_element_nml['c202'] = -0.25
+    elcol.matrix_element_nml['c022'] = -0.25
+    elcol.matrix_element_nml['c001'] = m_mcp**2 + m_f**2
+    elcol.matrix_element_nml['c201'] = m_mcp**2
+    elcol.matrix_element_nml['c021'] = m_f**2
+    elcol.matrix_element_nml['c000'] = 4*m_f**2*m_mcp**2
+    
+    return elcol
+
+def setup_coulomb_integrals(m_mcp, mgam):
     m_e = 0.511
     m_mu = 105
     m_tau = 1776
     m_s = 95
     m_c = 1270
-    m_mcp = mass
+    m_b = 4180
+    m_t = 172.76*1e3
     
-    coulomb_e = elscat.ElasticCollisionIntegral(m_e, m_mcp, mgam, zeta_a=1, zeta_b=1)
-    coulomb_e.matrix_element_nml['c222'] = 0.75
-    coulomb_e.matrix_element_nml['c002'] = 0.75
-    coulomb_e.matrix_element_nml['c202'] = -0.25
-    coulomb_e.matrix_element_nml['c022'] = -0.25
-    coulomb_e.matrix_element_nml['c001'] = m_mcp**2 + m_e**2
-    coulomb_e.matrix_element_nml['c201'] = m_mcp**2
-    coulomb_e.matrix_element_nml['c021'] = m_e**2
-    coulomb_e.matrix_element_nml['c000'] = 4*m_e**2*m_mcp**2
     
-    coulomb_mu = elscat.ElasticCollisionIntegral(m_mu, m_mcp, mgam, zeta_a=1, zeta_b=1)
-    coulomb_mu.matrix_element_nml['c222'] = 0.75
-    coulomb_mu.matrix_element_nml['c002'] = 0.75
-    coulomb_mu.matrix_element_nml['c202'] = -0.25
-    coulomb_mu.matrix_element_nml['c022'] = -0.25
-    coulomb_mu.matrix_element_nml['c001'] = m_mcp**2 + m_mu**2
-    coulomb_mu.matrix_element_nml['c201'] = m_mcp**2
-    coulomb_mu.matrix_element_nml['c021'] = m_mu**2
-    coulomb_mu.matrix_element_nml['c000'] = 4*m_mu**2*m_mcp**2
-
-    coulomb_tau = elscat.ElasticCollisionIntegral(m_tau, m_mcp, mgam, zeta_a=1, zeta_b=1)
-    coulomb_tau.matrix_element_nml['c222'] = 0.75
-    coulomb_tau.matrix_element_nml['c002'] = 0.75
-    coulomb_tau.matrix_element_nml['c202'] = -0.25
-    coulomb_tau.matrix_element_nml['c022'] = -0.25
-    coulomb_tau.matrix_element_nml['c001'] = m_mcp**2 + m_tau**2
-    coulomb_tau.matrix_element_nml['c201'] = m_mcp**2
-    coulomb_tau.matrix_element_nml['c021'] = m_tau**2
-    coulomb_tau.matrix_element_nml['c000'] = 4*m_tau**2*m_mcp**2
-
-    coulomb_lq = elscat.ElasticCollisionIntegral(0.0, m_mcp, mgam, zeta_a=1, zeta_b=1)
-    coulomb_lq.matrix_element_nml['c222'] = 0.75
-    coulomb_lq.matrix_element_nml['c002'] = 0.75
-    coulomb_lq.matrix_element_nml['c202'] = -0.25
-    coulomb_lq.matrix_element_nml['c022'] = -0.25
-    coulomb_lq.matrix_element_nml['c001'] = m_mcp**2 
-    coulomb_lq.matrix_element_nml['c201'] = m_mcp**2
-    coulomb_lq.matrix_element_nml['c021'] = 0
-    coulomb_lq.matrix_element_nml['c000'] = 0
+    coulomb_e = _setup_int(m_mcp, m_e, mgam)
+    coulomb_mu = _setup_int(m_mcp, m_mu, mgam)
+    coulomb_tau = _setup_int(m_mcp, m_tau, mgam)   
     
-    coulomb_strange = elscat.ElasticCollisionIntegral(m_s, m_mcp, mgam, zeta_a=1, zeta_b=1)
-    coulomb_strange.matrix_element_nml['c222'] = 0.75
-    coulomb_strange.matrix_element_nml['c002'] = 0.75
-    coulomb_strange.matrix_element_nml['c202'] = -0.25
-    coulomb_strange.matrix_element_nml['c022'] = -0.25
-    coulomb_strange.matrix_element_nml['c001'] = m_mcp**2 + m_s**2
-    coulomb_strange.matrix_element_nml['c201'] = m_mcp**2
-    coulomb_strange.matrix_element_nml['c021'] = m_s**2
-    coulomb_strange.matrix_element_nml['c000'] = 4*m_s**2*m_mcp**2
-    
-    coulomb_charm = elscat.ElasticCollisionIntegral(m_c, m_mcp, mgam, zeta_a=1, zeta_b=1)
-    coulomb_charm.matrix_element_nml['c222'] = 0.75
-    coulomb_charm.matrix_element_nml['c002'] = 0.75
-    coulomb_charm.matrix_element_nml['c202'] = -0.25
-    coulomb_charm.matrix_element_nml['c022'] = -0.25
-    coulomb_charm.matrix_element_nml['c001'] = m_mcp**2 + m_c**2
-    coulomb_charm.matrix_element_nml['c201'] = m_mcp**2
-    coulomb_charm.matrix_element_nml['c021'] = m_c**2
-    coulomb_charm.matrix_element_nml['c000'] = 4*m_c**2*m_mcp**2
+    coulomb_lq = _setup_int(m_mcp, 0.0, mgam)   
+    coulomb_strange = _setup_int(m_mcp, m_s, mgam)   
+    coulomb_charm = _setup_int(m_mcp, m_c, mgam)  
+    coulomb_bottom = _setup_int(m_mcp, m_b, mgam)  
+    coulomb_top = _setup_int(m_mcp, m_t, mgam)
     
     return {
         "rate_e": coulomb_e, 
@@ -85,7 +50,9 @@ def setup_coulomb_integrals(mass, mgam):
         "rate_tau": coulomb_tau, 
         "rate_lq": coulomb_lq, 
         "rate_strange": coulomb_strange,
-        "rate_charm": coulomb_charm
+        "rate_charm": coulomb_charm,
+        "rate_bottom": coulomb_bottom,
+        "rate_top": coulomb_top
         } 
     
 def compute_coulomb_rate(temps, mass, n_strat, neval, nitn):
@@ -131,7 +98,8 @@ def compute_coulomb_rate(temps, mass, n_strat, neval, nitn):
     rate_int_lq = rate_funs['rate_lq']
     rate_int_strange = rate_funs['rate_strange']
     rate_int_charm = rate_funs['rate_charm']
-
+    rate_int_bot = rate_funs['rate_bottom']
+    rate_int_top = rate_funs['rate_top']
     
     result_e = 0.0
     result_mu = 0.0
@@ -139,6 +107,8 @@ def compute_coulomb_rate(temps, mass, n_strat, neval, nitn):
     result_lq = 0.0
     result_strange = 0.0
     result_charm = 0.0
+    result_bot = 0.0
+    result_top = 0.0
             
 
     result_e = rate_int_e.compute_QS(T_sm, T_ds, n_strat=n_strat, neval=neval, nitn=nitn)[0]
@@ -149,6 +119,9 @@ def compute_coulomb_rate(temps, mass, n_strat, neval, nitn):
         result_lq = rate_int_lq.compute_QS(T_sm, T_ds, n_strat=n_strat, neval=neval, nitn=nitn)[0]
         result_strange = rate_int_strange.compute_QS(T_sm, T_ds, n_strat=n_strat, neval=neval, nitn=nitn)[0]
         result_charm = rate_int_charm.compute_QS(T_sm, T_ds, n_strat=n_strat, neval=neval, nitn=nitn)[0]
+        result_bot = rate_int_bot.compute_QS(T_sm, T_ds, n_strat=n_strat, neval=neval, nitn=nitn)[0]
+        result_top = rate_int_top.compute_QS(T_sm, T_ds, n_strat=n_strat, neval=neval, nitn=nitn)[0]
+        
             
     #compute prefactors, dont include millicharge since all processes rescale with the millicharge
     alpha = 1.0/137.0
@@ -158,14 +131,25 @@ def compute_coulomb_rate(temps, mass, n_strat, neval, nitn):
     q_d = -1/3
     q_s = -1/3
     q_c = 2/3   
+    q_b = -1/3
+    q_t = 2/3
     
     #factor to scale the coeeficients by
     pref_lept = 4*16*np.pi*e**4
     pref_lq = 4*3*16*np.pi*e**4*(q_u**2 + q_d**2)
     pref_strange = 4*3*16*np.pi*e**4*(q_s**2)
     pref_charm = 4*3*16*np.pi*e**4*(q_c**2)
+    pref_bot = 4*3*16*np.pi*e**4*(q_b**2)
+    pref_top = 4*3*16*np.pi*e**4*(q_t**2)
     
-    result_total = pref_lept*(result_e + result_mu + result_tau) + pref_lq*(result_lq) + pref_charm*result_charm + pref_strange*result_strange
+    result_total = (
+        pref_lept*(result_e + result_mu + result_tau) 
+      + pref_lq*(result_lq) 
+      + pref_charm*result_charm 
+      + pref_strange*result_strange
+      + pref_bot*result_bot
+      + pref_top*result_top
+    )
     
     return result_total
 
@@ -299,7 +283,7 @@ if __name__ == "__main__":
     if args.forwards is True:
         fun_loop = partial(
             compute_coulomb_rate_forwards, 
-            mass=args.mass,
+            m_mcp=args.mass,
             n_strat=([3]+[3]), 
             neval=1e3, 
             nitn=10
