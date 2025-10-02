@@ -55,7 +55,7 @@ def setup_coulomb_integrals(m_mcp, mgam):
         "rate_top": coulomb_top
         } 
     
-def compute_coulomb_rate(temps, mass, n_strat, neval, nitn):
+def compute_coulomb_rate(temps, m_mcp, n_strat, neval, nitn):
     '''
     Compute coulomb scattering collision integral with sm fermions for an mcp of mass M at millicharge = 1.0
     
@@ -87,11 +87,10 @@ def compute_coulomb_rate(temps, mass, n_strat, neval, nitn):
     m_tau = 1776
     m_s = 95
     m_c = 1270
-    m_mcp = mass
     
     LQCD = 200
     
-    rate_funs = setup_coulomb_integrals(mass, mgamma_thermal)
+    rate_funs = setup_coulomb_integrals(m_mcp, mgamma_thermal)
     rate_int_e = rate_funs['rate_e']
     rate_int_mu = rate_funs['rate_mu']
     rate_int_tau = rate_funs['rate_tau']
@@ -154,7 +153,7 @@ def compute_coulomb_rate(temps, mass, n_strat, neval, nitn):
     return result_total
 
 
-def compute_coulomb_rate_forwards(temps, mass, n_strat, neval, nitn):
+def compute_coulomb_rate_forwards(temps, m_mcp, n_strat, neval, nitn):
     '''
     Compute coulomb scattering collision integral with sm fermions for an mcp of mass M at millicharge = 1.0
     
@@ -186,17 +185,18 @@ def compute_coulomb_rate_forwards(temps, mass, n_strat, neval, nitn):
     m_tau = 1776
     m_s = 95
     m_c = 1270
-    m_mcp = mass
     
     LQCD = 200
     
-    rate_funs = setup_coulomb_integrals(mass, mgamma_thermal)
+    rate_funs = setup_coulomb_integrals(m_mcp, mgamma_thermal)
     rate_int_e = rate_funs['rate_e']
     rate_int_mu = rate_funs['rate_mu']
     rate_int_tau = rate_funs['rate_tau']
     rate_int_lq = rate_funs['rate_lq']
     rate_int_strange = rate_funs['rate_strange']
     rate_int_charm = rate_funs['rate_charm']
+    rate_int_bot = rate_funs['rate_bottom']
+    rate_int_top = rate_funs['rate_top']
 
     
     result_e = 0.0
@@ -205,6 +205,8 @@ def compute_coulomb_rate_forwards(temps, mass, n_strat, neval, nitn):
     result_lq = 0.0
     result_strange = 0.0
     result_charm = 0.0
+    result_bot = 0.0
+    result_top = 0.0
             
 
     result_e = rate_int_e.compute_QS_forwards(T_sm, T_ds, n_strat=n_strat, neval=neval, nitn=nitn)[0]
@@ -215,6 +217,8 @@ def compute_coulomb_rate_forwards(temps, mass, n_strat, neval, nitn):
         result_lq = rate_int_lq.compute_QS_forwards(T_sm, T_ds, n_strat=n_strat, neval=neval, nitn=nitn)[0]
         result_strange = rate_int_strange.compute_QS_forwards(T_sm, T_ds, n_strat=n_strat, neval=neval, nitn=nitn)[0]
         result_charm = rate_int_charm.compute_QS_forwards(T_sm, T_ds, n_strat=n_strat, neval=neval, nitn=nitn)[0]
+        result_bot = rate_int_bot.compute_QS_forwards(T_sm, T_ds, n_strat=n_strat, neval=neval, nitn=nitn)[0]
+        result_top = rate_int_top.compute_QS_forwards(T_sm, T_ds, n_strat=n_strat, neval=neval, nitn=nitn)[0]
             
     #compute prefactors, dont include millicharge since all processes rescale with the millicharge
     alpha = 1.0/137.0
@@ -224,14 +228,26 @@ def compute_coulomb_rate_forwards(temps, mass, n_strat, neval, nitn):
     q_d = -1/3
     q_s = -1/3
     q_c = 2/3   
+    q_b = -1/3
+    q_t = 2/3
+    
     
     #factor to scale the coeeficients by
     pref_lept = 4*16*np.pi*e**4
     pref_lq = 4*3*16*np.pi*e**4*(q_u**2 + q_d**2)
     pref_strange = 4*3*16*np.pi*e**4*(q_s**2)
     pref_charm = 4*3*16*np.pi*e**4*(q_c**2)
+    pref_bot = 4*3*16*np.pi*e**4*(q_b**2)
+    pref_top = 4*3*16*np.pi*e**4*(q_t**2)
     
-    result_total = pref_lept*(result_e + result_mu + result_tau) + pref_lq*(result_lq) + pref_charm*result_charm + pref_strange*result_strange
+    result_total = (
+        pref_lept*(result_e + result_mu + result_tau) 
+      + pref_lq*(result_lq) 
+      + pref_charm*result_charm 
+      + pref_strange*result_strange
+      + pref_bot*result_bot
+      + pref_top*result_top
+    )
 
     return result_total
 
@@ -274,7 +290,7 @@ if __name__ == "__main__":
 
     fun_loop = partial(
         compute_coulomb_rate, 
-        mass=args.mass,
+        m_mcp=args.mass,
         n_strat=([3]+[3]), 
         neval=1e3, 
         nitn=10
