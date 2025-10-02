@@ -73,13 +73,13 @@ def M2_llff(s,c2, m_mcp, m_l):#Note VR13 say they neglect the smaller of the 2 m
     return 4 * e**4 * Ql**2 * (1/s**2) * (s**2 * (1 + c2) + 4 * s * (m_mcp**2 + m_l**2)*(1-c2) + 16 * m_mcp**2 * m_l**2 * c2)
 
 #Cross-section:
-def sigma_llff(s, m_mcp, m_l):
+def sigma_llff(s, m_mcp, m_f, q_f=-1.0):
     #Kinematics
     Ei = np.sqrt(s)/2
     Ef = Ei
-    pi = np.sqrt(Ei**2 - m_l**2)
+    pi = np.sqrt(Ei**2 - m_f**2)
     pf = np.sqrt(Ef**2 - m_mcp**2)
-    return 4 * e**4 * Ql**2 * (2 * np.pi) / ((8 * np.pi)**2 ) * (1/s) * (pf/pi) * (8/3 + (32 * m_mcp**2 * m_l**2) / (3 * s**2) + (16 *(m_mcp**2 + m_l**2)) / (3 * s))
+    return 4 * e**4 * q_f**2 * (2 * np.pi) / ((8 * np.pi)**2 ) * (1/s) * (pf/pi) * (8/3 + (32 * m_mcp**2 * m_f**2) / (3 * s**2) + (16 *(m_mcp**2 + m_f**2)) / (3 * s))
 
 # includes contribution from Z boson mediated annihilation, with the on shell Z piece subtracted off  see eq A.3 of 2206.13530
 def sigma_llff_Z_boson(s, m_mcp, m_f, q_f, cv, ca):
@@ -93,7 +93,8 @@ def sigma_llff_Z_boson(s, m_mcp, m_f, q_f, cv, ca):
     prefactor = 4 * e**4 * (2 * np.pi) / ((8 * np.pi)**2 )
     photon_med = q_f**2*(4/3)*(2*m_mcp**2 + s)*(2*m_f**2 + s)
     Z_med = -np.heaviside(s - M_z**2, 0)*(s + 2*m_mcp**2)*m_f**2*(cv**2 + 3*ca**2)/(2*c2_theta_w**2)
-    interference = np.heaviside(s - M_z**2, 0)*( (cv**2 + ca**2)/(4*c2_theta_w) - cv*q_f/c2_theta_w ) #I think only the second term in here is actuallu interference but w/e
+    #I think only the second term in here is actually interference but w/e
+    interference = np.heaviside(s - M_z**2, 0)*(4/3)*(2*m_mcp**2 + s)*(2*m_f**2 + s)*( (cv**2 + ca**2)/(4*c2_theta_w) - cv*q_f/c2_theta_w ) 
     
     return prefactor * (1/s**3) * (pf/pi) * (photon_med + Z_med + interference)
 
@@ -117,29 +118,29 @@ def sigma_pipi_ff(s, m_mcp):
     pf = np.sqrt(Ef**2 - m_mcp**2)
     return e**4 * np.abs(F_pi(s))**2 * (pf/pi) * (s - 4*m_pi**2) * (s + 2*m_mcp**2) / (24*np.pi * s**3)
         
-def I_integrand(lns,sigma_func, m_l, T):#log-space
+def I_integrand(lns,sigma_func, m_f, T):#log-space
     s=np.exp(lns)
     dlns = s
     z = np.sqrt(s)/T
-    return s * sigma_func(s) * (s - 4 * m_l**2) * dlns * np.where(z<100,kn(2,z),kn2_asymptotic(z))
+    return s * sigma_func(s) * (s - 4 * m_f**2) * dlns * np.where(z<100,kn(2,z),kn2_asymptotic(z))
     
-def I_integrand_fermi(lns, sigma_func, m_l, T):#log-space
+def I_integrand_fermi(lns, sigma_func, m_f, T):#log-space
     s=np.exp(lns)
     dlns = s
     z = np.sqrt(s)/T
-    return s * sigma_func(s) * (s - 4 * m_l**2) * G_fermion(z)*dlns
+    return s * sigma_func(s) * (s - 4 * m_f**2) * G_fermion(z)*dlns
 
 #Annihilation collision term integral
 g1 = 2
 g2 = 2
 #dont use these because the cross sections are already spin-summed
 
-def Ix(sigma_func, m_mcp, m_l, T):
+def Ix(sigma_func, m_mcp, m_f, T):
     prefactor = T /(2**5 * np.pi**4) 
     #At high temperature, the upper bound should be past the peak which is around 10 T^2. 
     #At low temperature, this estimate is actually lower than 4m^2, so we need to explicitly go a bit above 4m^2. The peak is very narrow and close to 4m^2 in this regime. 
     # ~ lns_min = np.log(4*m_f**2) #should this be log(max(4m_f^2, 4m_l^2))?
-    mass_thresh = max(4*m_mcp**2, 4*m_l**2)
+    mass_thresh = max(4*m_mcp**2, 4*m_f**2)
     lns_min = np.log(mass_thresh)
     lns_max = max(np.log(T**2)+10,np.log(mass_thresh)+1)
     
@@ -147,19 +148,19 @@ def Ix(sigma_func, m_mcp, m_l, T):
         I_integrand,
         lns_min,
         lns_max,
-        args=(sigma_func, m_l, T),
+        args=(sigma_func, m_f, T),
         epsabs=0 #huh?
     )
     
     return prefactor * integral[0]
 
 
-def Ix_fermi(sigma_func, m_mcp, m_l, T):
+def Ix_fermi(sigma_func, m_mcp, m_f, T):
     prefactor = T /(32 * np.pi**4) 
     #At high temperature, the upper bound should be past the peak which is around 10 T^2. 
     #At low temperature, this estimate is actually lower than 4m^2, so we need to explicitly go a bit above 4m^2. The peak is very narrow and close to 4m^2 in this regime. 
     # ~ lns_min = np.log(4*m_f**2) #should this be log(max(4m_f^2, 4m_l^2))?
-    mass_thresh = max(4*m_mcp**2, 4*m_l**2)
+    mass_thresh = max(4*m_mcp**2, 4*m_f**2)
     lns_min = np.log(mass_thresh)
     lns_max = max(np.log(T**2)+10,np.log(mass_thresh)+1)
     
@@ -167,7 +168,7 @@ def Ix_fermi(sigma_func, m_mcp, m_l, T):
         I_integrand_fermi,
         lns_min,
         lns_max,
-        args=(sigma_func, m_l, T),
+        args=(sigma_func, m_f, T),
         epsabs=0, #huh?
         limit=200
     )

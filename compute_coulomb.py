@@ -87,6 +87,8 @@ def compute_coulomb_rate(temps, m_mcp, n_strat, neval, nitn):
     m_tau = 1776
     m_s = 95
     m_c = 1270
+    m_b = 4180
+    m_t = 172.76*1e3
     
     LQCD = 200
     
@@ -111,15 +113,43 @@ def compute_coulomb_rate(temps, m_mcp, n_strat, neval, nitn):
             
 
     result_e = rate_int_e.compute_QS(T_sm, T_ds, n_strat=n_strat, neval=neval, nitn=nitn)[0]
-    result_mu = rate_int_mu.compute_QS(T_sm, T_ds, n_strat=n_strat, neval=neval, nitn=nitn)[0]
-    result_tau = rate_int_tau.compute_QS(T_sm, T_ds, n_strat=n_strat, neval=neval, nitn=nitn)[0]
+    
+    if T_sm > m_mu/30.0:
+        if T_sm > 5*m_mu:
+            result_mu = result_e
+        else:
+            result_mu = rate_int_mu.compute_QS(T_sm, T_ds, n_strat=n_strat, neval=neval, nitn=nitn)[0]
+        
+    if T_sm > m_tau/30.0:
+        if T_sm > 5*m_tau:
+            result_tau = result_e
+        else:
+            result_tau = rate_int_tau.compute_QS(T_sm, T_ds, n_strat=n_strat, neval=neval, nitn=nitn)[0]
         
     if T_sm > LQCD:
         result_lq = rate_int_lq.compute_QS(T_sm, T_ds, n_strat=n_strat, neval=neval, nitn=nitn)[0]
-        result_strange = rate_int_strange.compute_QS(T_sm, T_ds, n_strat=n_strat, neval=neval, nitn=nitn)[0]
-        result_charm = rate_int_charm.compute_QS(T_sm, T_ds, n_strat=n_strat, neval=neval, nitn=nitn)[0]
-        result_bot = rate_int_bot.compute_QS(T_sm, T_ds, n_strat=n_strat, neval=neval, nitn=nitn)[0]
-        result_top = rate_int_top.compute_QS(T_sm, T_ds, n_strat=n_strat, neval=neval, nitn=nitn)[0]
+        
+        if T_sm > 5*m_s:
+            result_strange = result_lq
+        else:
+            result_strange = rate_int_strange.compute_QS(T_sm, T_ds, n_strat=n_strat, neval=neval, nitn=nitn)[0]
+            
+        if T_sm > 5*m_c:
+            result_charm = result_lq
+        else:
+            result_charm = rate_int_charm.compute_QS(T_sm, T_ds, n_strat=n_strat, neval=neval, nitn=nitn)[0]
+        
+        if T_sm > m_b/30.0:
+            if T_sm > 5*m_b:
+                result_bot = result_lq
+            else:
+                result_bot = rate_int_bot.compute_QS(T_sm, T_ds, n_strat=n_strat, neval=neval, nitn=nitn)[0]
+            
+        if T_sm > m_t/30.0:
+            if T_sm > 5*m_t:
+                result_top = result_lq
+            else:
+                result_top = rate_int_top.compute_QS(T_sm, T_ds, n_strat=n_strat, neval=neval, nitn=nitn)[0]
         
             
     #compute prefactors, dont include millicharge since all processes rescale with the millicharge
@@ -185,6 +215,9 @@ def compute_coulomb_rate_forwards(temps, m_mcp, n_strat, neval, nitn):
     m_tau = 1776
     m_s = 95
     m_c = 1270
+    m_b = 4180
+    m_t = 172.76*1e3
+    
     
     LQCD = 200
     
@@ -210,15 +243,44 @@ def compute_coulomb_rate_forwards(temps, m_mcp, n_strat, neval, nitn):
             
 
     result_e = rate_int_e.compute_QS_forwards(T_sm, T_ds, n_strat=n_strat, neval=neval, nitn=nitn)[0]
-    result_mu = rate_int_mu.compute_QS_forwards(T_sm, T_ds, n_strat=n_strat, neval=neval, nitn=nitn)[0]
-    result_tau = rate_int_tau.compute_QS_forwards(T_sm, T_ds, n_strat=n_strat, neval=neval, nitn=nitn)[0]
+    
+    if T_sm > m_mu/30.0:
+        if T_sm > 5*m_mu:
+            result_mu = result_e
+        else:
+            result_mu = rate_int_mu.compute_QS_forwards(T_sm, T_ds, n_strat=n_strat, neval=neval, nitn=nitn)[0]
+        
+    if T_sm > m_tau/30.0:
+        if T_sm > 5*m_tau:
+            result_tau = result_e
+        else:
+            result_tau = rate_int_tau.compute_QS_forwards(T_sm, T_ds, n_strat=n_strat, neval=neval, nitn=nitn)[0]
         
     if T_sm > LQCD:
         result_lq = rate_int_lq.compute_QS_forwards(T_sm, T_ds, n_strat=n_strat, neval=neval, nitn=nitn)[0]
-        result_strange = rate_int_strange.compute_QS_forwards(T_sm, T_ds, n_strat=n_strat, neval=neval, nitn=nitn)[0]
-        result_charm = rate_int_charm.compute_QS_forwards(T_sm, T_ds, n_strat=n_strat, neval=neval, nitn=nitn)[0]
-        result_bot = rate_int_bot.compute_QS_forwards(T_sm, T_ds, n_strat=n_strat, neval=neval, nitn=nitn)[0]
-        result_top = rate_int_top.compute_QS_forwards(T_sm, T_ds, n_strat=n_strat, neval=neval, nitn=nitn)[0]
+        
+        if T_sm > 5*m_s:
+            result_strange = result_lq
+        else:
+            result_strange = rate_int_strange.compute_QS_forwards(T_sm, T_ds, n_strat=n_strat, neval=neval, nitn=nitn)[0]
+            
+        if T_sm > 5*m_c:
+            result_charm = result_lq
+        else:
+            result_charm = rate_int_charm.compute_QS_forwards(T_sm, T_ds, n_strat=n_strat, neval=neval, nitn=nitn)[0]
+        
+        if T_sm > m_b/30.0:
+            if T_sm > 5*m_b:
+                result_bot = result_lq
+            else:
+                result_bot = rate_int_bot.compute_QS_forwards(T_sm, T_ds, n_strat=n_strat, neval=neval, nitn=nitn)[0]
+            
+        if T_sm > m_t/30.0:
+            if T_sm > 5*m_t:
+                result_top = result_lq
+            else:
+                result_top = rate_int_top.compute_QS_forwards(T_sm, T_ds, n_strat=n_strat, neval=neval, nitn=nitn)[0]
+        
             
     #compute prefactors, dont include millicharge since all processes rescale with the millicharge
     alpha = 1.0/137.0
