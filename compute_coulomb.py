@@ -11,12 +11,22 @@ from scipy.interpolate import interp1d
 import mcp_boltzmann.elastic_scattering as elscat
 import mcp_boltzmann.plasma as plas
 
-def _setup_int(m_mcp, m_f, mgam):
+def _setup_int(m_mcp, m_f, mgam, electroweak=False):
     elcol = elscat.ElasticCollisionIntegral(m_f, m_mcp, mgam, zeta_a=1, zeta_b=1)
+    
+    if electroweak:
+        elcol.matrix_element_nml['c222'] = 0.75
+        elcol.matrix_element_nml['c202'] = -0.25
+        elcol.matrix_element_nml['c022'] = -0.25
+        elcol.matrix_element_nml['c002'] = -0.25
+        elcol.matrix_element_nml['c201'] = m_mcp**2
+        elcol.matrix_element_nml['c001'] = -m_mcp**2
+        return elcol
+        
     elcol.matrix_element_nml['c222'] = 0.75
-    elcol.matrix_element_nml['c002'] = 0.75
     elcol.matrix_element_nml['c202'] = -0.25
     elcol.matrix_element_nml['c022'] = -0.25
+    elcol.matrix_element_nml['c002'] = 0.75
     elcol.matrix_element_nml['c001'] = m_mcp**2 + m_f**2
     elcol.matrix_element_nml['c201'] = m_mcp**2
     elcol.matrix_element_nml['c021'] = m_f**2
@@ -24,7 +34,7 @@ def _setup_int(m_mcp, m_f, mgam):
     
     return elcol
 
-def setup_coulomb_integrals(m_mcp, mgam):
+def setup_coulomb_integrals(m_mcp, mgam, electroweak=False):
     m_e = 0.511
     m_mu = 105
     m_tau = 1776
@@ -34,15 +44,15 @@ def setup_coulomb_integrals(m_mcp, mgam):
     m_t = 172.76*1e3
     
     
-    coulomb_e = _setup_int(m_mcp, m_e, mgam)
-    coulomb_mu = _setup_int(m_mcp, m_mu, mgam)
-    coulomb_tau = _setup_int(m_mcp, m_tau, mgam)   
+    coulomb_e = _setup_int(m_mcp, m_e, mgam, electroweak)
+    coulomb_mu = _setup_int(m_mcp, m_mu, mgam, electroweak)
+    coulomb_tau = _setup_int(m_mcp, m_tau, mgam, electroweak)   
     
-    coulomb_lq = _setup_int(m_mcp, 0.0, mgam)   
-    coulomb_strange = _setup_int(m_mcp, m_s, mgam)   
-    coulomb_charm = _setup_int(m_mcp, m_c, mgam)  
-    coulomb_bottom = _setup_int(m_mcp, m_b, mgam)  
-    coulomb_top = _setup_int(m_mcp, m_t, mgam)
+    coulomb_lq = _setup_int(m_mcp, 0.0, mgam, electroweak)   
+    coulomb_strange = _setup_int(m_mcp, m_s, mgam, electroweak)   
+    coulomb_charm = _setup_int(m_mcp, m_c, mgam, electroweak)  
+    coulomb_bottom = _setup_int(m_mcp, m_b, mgam, electroweak)  
+    coulomb_top = _setup_int(m_mcp, m_t, mgam, electroweak)
     
     return {
         "rate_e": coulomb_e, 
@@ -91,8 +101,11 @@ def compute_coulomb_rate(temps, m_mcp, n_strat, neval, nitn):
     m_t = 172.76*1e3
     
     LQCD = 200
+    T_EW = 160*1e3
     
-    rate_funs = setup_coulomb_integrals(m_mcp, mgamma_thermal)
+    electroweak = (T_sm > T_EW)
+
+    rate_funs = setup_coulomb_integrals(m_mcp, mgamma_thermal, electroweak)
     rate_int_e = rate_funs['rate_e']
     rate_int_mu = rate_funs['rate_mu']
     rate_int_tau = rate_funs['rate_tau']

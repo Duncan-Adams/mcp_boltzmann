@@ -90,7 +90,7 @@ def sigma_llff_Z_boson(s, m_mcp, m_f, q_f, cv, ca):
     pi = np.sqrt(Ei**2 - m_f**2)
     pf = np.sqrt(Ef**2 - m_mcp**2)
     
-    prefactor = 4 * e**4 * (2 * np.pi) / ((8 * np.pi)**2 )
+    prefactor = 8 * e**4 * (2 * np.pi) / ((8 * np.pi)**2 )
     photon_med = q_f**2*(4/3)*(2*m_mcp**2 + s)*(2*m_f**2 + s)
     Z_med = -np.heaviside(s - M_z**2, 0)*(s + 2*m_mcp**2)*m_f**2*(cv**2 + 3*ca**2)/(2*c2_theta_w**2)
     #I think only the second term in here is actually interference but w/e
