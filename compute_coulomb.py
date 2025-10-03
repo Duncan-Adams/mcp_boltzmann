@@ -11,18 +11,8 @@ from scipy.interpolate import interp1d
 import mcp_boltzmann.elastic_scattering as elscat
 import mcp_boltzmann.plasma as plas
 
-def _setup_int(m_mcp, m_f, mgam, electroweak=False):
+def _setup_int_ff(m_mcp, m_f, mgam)
     elcol = elscat.ElasticCollisionIntegral(m_f, m_mcp, mgam, zeta_a=1, zeta_b=1)
-    
-    if electroweak:
-        elcol.matrix_element_nml['c222'] = 0.75
-        elcol.matrix_element_nml['c202'] = -0.25
-        elcol.matrix_element_nml['c022'] = -0.25
-        elcol.matrix_element_nml['c002'] = -0.25
-        elcol.matrix_element_nml['c201'] = m_mcp**2
-        elcol.matrix_element_nml['c001'] = -m_mcp**2
-        return elcol
-        
     elcol.matrix_element_nml['c222'] = 0.75
     elcol.matrix_element_nml['c202'] = -0.25
     elcol.matrix_element_nml['c022'] = -0.25
@@ -31,6 +21,17 @@ def _setup_int(m_mcp, m_f, mgam, electroweak=False):
     elcol.matrix_element_nml['c201'] = m_mcp**2
     elcol.matrix_element_nml['c021'] = m_f**2
     elcol.matrix_element_nml['c000'] = 4*m_f**2*m_mcp**2
+    
+    return elcol
+    
+def _setup_int_hh(m_mcp, m_B):
+    elcol = elscat.ElasticCollisionIntegral(0.0, m_mcp, m_B, zeta_a=-1, zeta_b=1)
+    elcol.matrix_element_nml['c222'] = 0.75
+    elcol.matrix_element_nml['c202'] = -0.25
+    elcol.matrix_element_nml['c022'] = -0.25
+    elcol.matrix_element_nml['c002'] = -0.25
+    elcol.matrix_element_nml['c201'] = m_mcp**2
+    elcol.matrix_element_nml['c001'] = -m_mcp**2
     
     return elcol
 
@@ -44,15 +45,17 @@ def setup_coulomb_integrals(m_mcp, mgam, electroweak=False):
     m_t = 172.76*1e3
     
     
-    coulomb_e = _setup_int(m_mcp, m_e, mgam, electroweak)
-    coulomb_mu = _setup_int(m_mcp, m_mu, mgam, electroweak)
-    coulomb_tau = _setup_int(m_mcp, m_tau, mgam, electroweak)   
+    coulomb_e = _setup_int_ff(m_mcp, m_e, mgam)
+    coulomb_mu = _setup_int_ff(m_mcp, m_mu, mgam)
+    coulomb_tau = _setup_int_ff(m_mcp, m_tau, mgam)   
     
-    coulomb_lq = _setup_int(m_mcp, 0.0, mgam, electroweak)   
-    coulomb_strange = _setup_int(m_mcp, m_s, mgam, electroweak)   
-    coulomb_charm = _setup_int(m_mcp, m_c, mgam, electroweak)  
-    coulomb_bottom = _setup_int(m_mcp, m_b, mgam, electroweak)  
-    coulomb_top = _setup_int(m_mcp, m_t, mgam, electroweak)
+    coulomb_lq = _setup_int_ff(m_mcp, 0.0, mgam)   
+    coulomb_strange = _setup_int_ff(m_mcp, m_s, mgam)   
+    coulomb_charm = _setup_int_ff(m_mcp, m_c, mgam)  
+    coulomb_bottom = _setup_int_ff(m_mcp, m_b, mgam)  
+    coulomb_top = _setup_int_ff(m_mcp, m_t, mgam)
+    
+    coulomb_higgs = _setup_int_hh(m_mcp, mgam)
     
     return {
         "rate_e": coulomb_e, 
@@ -62,7 +65,8 @@ def setup_coulomb_integrals(m_mcp, mgam, electroweak=False):
         "rate_strange": coulomb_strange,
         "rate_charm": coulomb_charm,
         "rate_bottom": coulomb_bottom,
-        "rate_top": coulomb_top
+        "rate_top": coulomb_top,
+        "rate_higgs": coulomb_higgs
         } 
     
 def compute_coulomb_rate(temps, m_mcp, n_strat, neval, nitn):
@@ -89,7 +93,12 @@ def compute_coulomb_rate(temps, m_mcp, n_strat, neval, nitn):
     
 
     #setup up callable that computes photon plasma mass
-    mgamma_thermal = lambda T_sm, T_ds: np.sqrt(plas.m_gam_2(T_sm))
+    electroweak = (T_sm > T_EW)
+    
+    if electroweak:
+        mgamma_thermal = lambda T_sm, T_ds: np.sqrt(plas.m_B_2(T_sm))
+    else:
+        mgamma_thermal = lambda T_sm, T_ds: np.sqrt(plas.m_gam_2(T_sm))
     
     #setup coulomb integrals
     m_e = 0.511
@@ -103,8 +112,6 @@ def compute_coulomb_rate(temps, m_mcp, n_strat, neval, nitn):
     LQCD = 200
     T_EW = 160*1e3
     
-    electroweak = (T_sm > T_EW)
-
     rate_funs = setup_coulomb_integrals(m_mcp, mgamma_thermal, electroweak)
     rate_int_e = rate_funs['rate_e']
     rate_int_mu = rate_funs['rate_mu']
@@ -114,6 +121,7 @@ def compute_coulomb_rate(temps, m_mcp, n_strat, neval, nitn):
     rate_int_charm = rate_funs['rate_charm']
     rate_int_bot = rate_funs['rate_bottom']
     rate_int_top = rate_funs['rate_top']
+    rate_int_higgs = rate_funs['rate_higgs']
     
     result_e = 0.0
     result_mu = 0.0
@@ -123,9 +131,12 @@ def compute_coulomb_rate(temps, m_mcp, n_strat, neval, nitn):
     result_charm = 0.0
     result_bot = 0.0
     result_top = 0.0
-            
+    result_higgs = 0.0
 
     result_e = rate_int_e.compute_QS(T_sm, T_ds, n_strat=n_strat, neval=neval, nitn=nitn)[0]
+    
+    if electroweak:
+        result_higgs = rate_int_higgs.compute_QS(T_sm, T_ds, n_strat=n_strat, neval=neval, nitn=nitn)[0]
     
     if T_sm > m_mu/30.0:
         if T_sm > 5*m_mu:
@@ -169,12 +180,26 @@ def compute_coulomb_rate(temps, m_mcp, n_strat, neval, nitn):
     alpha = 1.0/137.0
     e = np.sqrt(4*alpha*np.pi)
     
+    s2_theta_w = 0.22339 
+    c2_theta_w = 1-s2_theta_w
+    
     q_u = 2/3
     q_d = -1/3
     q_s = -1/3
     q_c = 2/3   
     q_b = -1/3
     q_t = 2/3
+    
+    #hyper charges, using convention that Q = T3 + Y 
+    Y_u_l = 1/6
+    Y_u_r = 2/3
+    Y_d_l = 1/6
+    Y_d_r = -1/3
+    Y_H = 1/2
+    
+    Y_e_l = -1/2
+    Y_nu_L = -1/2
+    Y_e_R = -1
     
     #factor to scale the coeeficients by
     pref_lept = 4*16*np.pi*e**4
@@ -183,6 +208,31 @@ def compute_coulomb_rate(temps, m_mcp, n_strat, neval, nitn):
     pref_charm = 4*3*16*np.pi*e**4*(q_c**2)
     pref_bot = 4*3*16*np.pi*e**4*(q_b**2)
     pref_top = 4*3*16*np.pi*e**4*(q_t**2)
+    pref_higgs = 0.0
+    
+    if electroweak:
+        #need to sum over each weyl fermion now
+        pref_e_l = Y_e_l**2/(2*q_e**2*c2_theta_w**2)
+        pref_e_r = Y_e_R**2/(2*q_e**2*c2_theta_w**2)
+        
+        pref_u_l = Y_u_l**2/(2*q_u**2*c2_theta_w**2)
+        pref_u_r = Y_u_r**2/(2*q_u**2*c2_theta_w**2)
+        
+        pref_d_l = Y_d_l**2/(2*q_d**2*c2_theta_w**2)
+        pref_d_r = Y_d_r**2/(2*q_d**2*c2_theta_w**2)
+        
+        pref_higgs = 4*np.pi*(e**4/c2_theta_w**2)
+        
+        pref_lept = 2*pref_e_l + 2*pref_e_r 
+        pref_u = 2*pref_u_l + 2*pref_u_r
+        pref_d = 2*pref_d_l + 2*pref_d_r
+        
+        pref_lq = 3*(pref_u + pref_d)
+        pref_charm = 3*pref_u
+        pref_strange = 3*pref_d
+        pref_top = 3*pref_u
+        pref_bot = 3*pref_d
+        
     
     result_total = (
         pref_lept*(result_e + result_mu + result_tau) 
@@ -191,6 +241,7 @@ def compute_coulomb_rate(temps, m_mcp, n_strat, neval, nitn):
       + pref_strange*result_strange
       + pref_bot*result_bot
       + pref_top*result_top
+      + pref_higgs*result_higgs
     )
     
     return result_total
