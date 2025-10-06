@@ -158,6 +158,7 @@ def _load_gstar_hudsal(path, include_nuetrinos=True):
 
 _base_path = os.path.dirname(os.path.abspath(__file__))
 _gstar_dat_path = os.path.join(_base_path, '../input/g_star.npz')
+_gstar_dat_path_no_nu = os.path.join(_base_path, '../input/g_star_no_nu.npz')
 
 def _load_gstar(path):
     with np.load(path) as f:
@@ -170,13 +171,18 @@ def _load_gstar(path):
 # ~ _T_grid, _g_E_no_nu, _g_P_no_nu = _load_gstar_hudsal(_gstar_dat_path, include_nuetrinos=False)
 
 
-_T_grid, _g_E_no_nu, _g_P_no_nu = _load_gstar(_gstar_dat_path)
-_g_E_EM_I = UnivariateSpline(_T_grid, _g_E_no_nu, k=3, s=0, ext=3)
+_T_grid, _g_E_no_nu, _g_P_no_nu = _load_gstar(_gstar_dat_path_no_nu)
+_g_E_EM_no_nu_I = UnivariateSpline(_T_grid, _g_E_no_nu, k=1, s=0, ext=3)
+_dg_E_EM_no_nu_I = _g_E_EM_no_nu_I.derivative()
+_g_P_EM_no_nu_I = UnivariateSpline(_T_grid, _g_P_no_nu, k=1, s=0, ext=3)
+
+_T_grid, _g_E, _g_P = _load_gstar(_gstar_dat_path)
+_g_E_EM_I = UnivariateSpline(_T_grid, _g_E_no_nu, k=1, s=0, ext=3)
 _dg_E_EM_I = _g_E_EM_I.derivative()
-_g_P_EM_I = UnivariateSpline(_T_grid, _g_P_no_nu, k=3, s=0, ext=3)
+_g_P_EM_I = UnivariateSpline(_T_grid, _g_P_no_nu, k=1, s=0, ext=3)
 
 
-def gstar_E_EM(T):
+def gstar_E_EM(T, T_nu_dec):
     '''
     compute g* for the pressure of the elctromagnetic plasma
     
@@ -189,9 +195,12 @@ def gstar_E_EM(T):
     float
         g_star_energy of T
     '''
-    return _g_E_EM_I(T)
-    
-def d_gstar_E_EM_dT(T):
+    return np.where(T < T_nu_dec,
+                    _g_E_EM_no_nu_I(T),
+                    _g_E_EM_I(T)
+    )
+
+def d_gstar_E_EM_dT(T, T_nu_dec):
     '''
     compute g* for the pressure of the elctromagnetic plasma
     
@@ -204,9 +213,12 @@ def d_gstar_E_EM_dT(T):
     float
         dg_star_energy_dT of T
     '''
-    return _dg_E_EM_I(T)
+    return np.where(T < T_nu_dec,
+                    _dg_E_EM_no_nu_I(T),
+                    _dg_E_EM_I(T)
+    )
 
-def gstar_P_EM(T):
+def gstar_P_EM(T, T_nu_dec):
     '''
     compute g* for the pressure of the electromagnetic plasma
     
@@ -219,10 +231,13 @@ def gstar_P_EM(T):
     float
         g_star_pressure of T
     '''
-    return _g_P_EM_I(T)
+    return np.where(T < T_nu_dec,
+                    _g_P_EM_no_nu_I(T),
+                    _g_P_EM_I(T)
+    )
 
 
-def w_EM(T):
+def w_EM(T, T_nu_dec):
     '''
     compute the equation of state, w, for the electromagnetic plasma
     
@@ -235,7 +250,5 @@ def w_EM(T):
     float
         equation of state of plasma at T
     '''
-    return gstar_P_EM(T)/(3*gstar_E_EM(T))
-
-
+    return gstar_P_EM(T, T_nu_dec)/(3*gstar_E_EM(T, T_nu_dec))
 

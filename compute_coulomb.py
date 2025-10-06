@@ -11,7 +11,7 @@ from scipy.interpolate import interp1d
 import mcp_boltzmann.elastic_scattering as elscat
 import mcp_boltzmann.plasma as plas
 
-def _setup_int_ff(m_mcp, m_f, mgam)
+def _setup_int_ff(m_mcp, m_f, mgam):
     elcol = elscat.ElasticCollisionIntegral(m_f, m_mcp, mgam, zeta_a=1, zeta_b=1)
     elcol.matrix_element_nml['c222'] = 0.75
     elcol.matrix_element_nml['c202'] = -0.25
@@ -35,7 +35,7 @@ def _setup_int_hh(m_mcp, m_B):
     
     return elcol
 
-def setup_coulomb_integrals(m_mcp, mgam, electroweak=False):
+def setup_coulomb_integrals(m_mcp, mgam):
     m_e = 0.511
     m_mu = 105
     m_tau = 1776
@@ -91,14 +91,6 @@ def compute_coulomb_rate(temps, m_mcp, n_strat, neval, nitn):
     T_sm = temps[0]
     T_ds = temps[1]
     
-
-    #setup up callable that computes photon plasma mass
-    electroweak = (T_sm > T_EW)
-    
-    if electroweak:
-        mgamma_thermal = lambda T_sm, T_ds: np.sqrt(plas.m_B_2(T_sm))
-    else:
-        mgamma_thermal = lambda T_sm, T_ds: np.sqrt(plas.m_gam_2(T_sm))
     
     #setup coulomb integrals
     m_e = 0.511
@@ -112,7 +104,15 @@ def compute_coulomb_rate(temps, m_mcp, n_strat, neval, nitn):
     LQCD = 200
     T_EW = 160*1e3
     
-    rate_funs = setup_coulomb_integrals(m_mcp, mgamma_thermal, electroweak)
+    #setup up callable that computes photon plasma mass
+    electroweak = (T_sm > T_EW)
+    
+    if electroweak:
+        mgamma_thermal = lambda T_sm, T_ds: np.sqrt(plas.m_B_2(T_sm))
+    else:
+        mgamma_thermal = lambda T_sm, T_ds: np.sqrt(plas.m_gam_2(T_sm))
+    
+    rate_funs = setup_coulomb_integrals(m_mcp, mgamma_thermal)
     rate_int_e = rate_funs['rate_e']
     rate_int_mu = rate_funs['rate_mu']
     rate_int_tau = rate_funs['rate_tau']
@@ -183,6 +183,7 @@ def compute_coulomb_rate(temps, m_mcp, n_strat, neval, nitn):
     s2_theta_w = 0.22339 
     c2_theta_w = 1-s2_theta_w
     
+    q_e = -1
     q_u = 2/3
     q_d = -1/3
     q_s = -1/3

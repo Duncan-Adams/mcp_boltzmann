@@ -18,25 +18,18 @@ m_mu = 105*MeV
 mev_to_K = 11.6
 MeV_to_K = 1e9*mev_to_K
 
+T_nu_dec = 3.0
+
 
 def rho_EM(T_gam):
-    return (np.pi**2/30)*gstar_E_EM(T_gam)*T_gam**4
+    return (np.pi**2/30)*gstar_E_EM(T_gam, T_nu_dec)*T_gam**4
 
 def p_EM(T_gam):
-    return w_EM(T_gam)*rho_EM(T_gam)
+    return w_EM(T_gam, T_nu_dec)*rho_EM(T_gam)
 
 def drho_EM_dT(T_gam):
-    return 4*(np.pi**2/30)*gstar_E_EM(T_gam)*T_gam**3 + (np.pi**2/30)*d_gstar_E_EM_dT(T_gam)*T_gam**4
+    return 4*(np.pi**2/30)*gstar_E_EM(T_gam, T_nu_dec)*T_gam**3 + (np.pi**2/30)*d_gstar_E_EM_dT(T_gam, T_nu_dec)*T_gam**4
     
-# ~ def rho_EM(T_gam):
-    # ~ return rho_gam(T_gam) + rho_e(T_gam)
-
-# ~ def p_EM(T_gam):
-    # ~ return (1/3)*rho_gam(T_gam) + p_e(T_gam)
-
-# ~ def drho_EM_dT(T_gam):
-    # ~ return drho_gamdT(T_gam) + drho_edT(T_gam)
-
 def rho_neutrino(T_nu):
     return 3*rho_nu(T_nu, np.zeros_like(T_nu))
 
@@ -53,10 +46,18 @@ def drho_DS_dT(T_ds, m_mcp):
     return drho_gamdT(T_ds) + drhoDM_dT_FD(T_ds, np.zeros_like(T_ds), m_mcp)
 
 def Hubble(T_gam, T_nu, T_ds, m_mcp):
-    rho_tot = rho_EM(T_gam) + rho_neutrino(T_nu) + rho_DS(T_ds, m_mcp)
+    if T_gam > T_nu_dec:
+        rho_tot = rho_EM(T_gam) + rho_DS(T_ds, m_mcp) #above T_nu_dec we inluce neutrinos in EM plasma
+    else:
+        rho_tot = rho_EM(T_gam) + rho_neutrino(T_nu) + rho_DS(T_ds, m_mcp)
+    
     return np.sqrt((8 * np.pi)/(3 * M_Planck**2) * (rho_tot))
     
 def Hubble_SM(T_gam, T_nu):
+    if T_gam > T_nu_dec:
+        rho_tot = rho_EM(T_gam) #above T_nu_dec we inluce neutrinos in EM plasma
+    else:
+        rho_tot = rho_EM(T_gam) + rho_neutrino(T_nu)
     rho_tot = rho_EM(T_gam) + rho_neutrino(T_nu)
     return np.sqrt((8 * np.pi)/(3 * M_Planck**2) * (rho_tot))
 
@@ -112,7 +113,10 @@ class Boltzmann:
         
         return (1/drho_EM_dT(T_gam))*(hub_term + col_term)
        
-    def dT_neutrino_dt(self, T_gam, T_nu, T_ds):        
+    def dT_neutrino_dt(self, T_gam, T_nu, T_ds):      
+        if T_gam >= T_nu_dec:
+            return np.atleast_1d(self.dT_EM_dt(T_gam, T_nu, T_ds))
+            
         H = Hubble(T_gam, T_nu, T_ds, self.m_mcp)
         
         hub_term = -4*H*(rho_neutrino(T_nu))
@@ -120,20 +124,10 @@ class Boltzmann:
 
         return (1/drho_neutrino_dT(T_nu))*(hub_term + col_term)
         
-    def dT_neutrino_dt_SM(self, T_gam, T_nu):
-        #hack for now
-        
-        if T_gam >= 1:
+    def dT_neutrino_dt_SM(self, T_gam, T_nu):        
+        if T_gam >= T_nu_dec:
             return self.dT_EM_dt_SM(T_gam, T_nu)
         
-        H = Hubble_SM(T_gam, T_nu)
-        
-        hub_term = -4*H*(rho_neutrino(T_nu))
-        col_term = self.colterm_EM_NU(T_gam, T_nu)
-        
-        return (1/drho_neutrino_dT(T_nu))*(hub_term + col_term)
-        
-    def dT_neutrino_dt_SM_correct(self, T_gam, T_nu):    
         H = Hubble_SM(T_gam, T_nu)
         
         hub_term = -4*H*(rho_neutrino(T_nu))
@@ -168,30 +162,34 @@ class Boltzmann:
         '''
         
         def dT(t, vec):
-            T_gam, T_nu, T_ds, a = vec
+            T_gam, T_nu, T_ds = vec
             res = np.array([
                 self.dT_EM_dt(T_gam, T_nu, T_ds)[0],
                 self.dT_neutrino_dt(T_gam, T_nu, T_ds)[0],
-                self.dT_DS_dt(T_gam, T_nu, T_ds)[0],
-                a*Hubble(T_gam, T_nu, T_ds, self.m_mcp)[0]
+                self.dT_DS_dt(T_gam, T_nu, T_ds)[0]
+                # ~ a*Hubble(T_gam, T_nu, T_ds, self.m_mcp)[0]
             ]
             )
+            # ~ print(res)
+            # ~ print(vec)
+            # ~ print()
+            # ~ print()
             return res
             
-        IC = [T_gam0, T_nu0, T_ds0, 1.0]
+        IC = [T_gam0, T_nu0, T_ds0]
         t0 = 1./(2 * Hubble(T_gam0, T_nu0, T_ds0, self.m_mcp))[0]
         t_max = 1e29
         t_eval = np.geomspace(t0, t_max, 500)
         
-        sol = solve_ivp(dT, [t0, t_max], IC, t_eval=t_eval, method='BDF', rtol=1e-6, atol=1e-6)
+        sol = solve_ivp(dT, [t0, t_max], IC, t_eval=t_eval, method='BDF', rtol=1e-5, atol=1e-5)
         
         #renormalize scale factors
-        scale_factor_end = sol.y[3][-1]
+        # ~ scale_factor_end = sol.y[3][-1]
         T_gam_end = sol.y[0][-1]
         
-        rel_scale_factor = 2.7/(T_gam_end*MeV_to_K)
+        # ~ rel_scale_factor = 2.7/(T_gam_end*MeV_to_K)
         
-        sol.y[3] = sol.y[3]*rel_scale_factor/scale_factor_end
+        # ~ sol.y[3] = sol.y[3]*rel_scale_factor/scale_factor_end
         
         return sol
         
@@ -228,50 +226,6 @@ class Boltzmann:
         t_eval = np.geomspace(t0, t_max, 500)
         
         sol = solve_ivp(dT, [t0, t_max], IC, t_eval=t_eval, method='BDF', rtol=1e-5, atol=1e-5)
-        
-        #renormalize scale factors
-        scale_factor_end = sol.y[2][-1]
-        T_gam_end = sol.y[0][-1]
-        
-        rel_scale_factor = 2.7/(T_gam_end*MeV_to_K)
-        
-        sol.y[2] = sol.y[2]*rel_scale_factor/scale_factor_end
-        
-        return sol
-        
-    def solve_boltzmann_eq_SM_correct(self, T_gam0, T_nu0):
-        '''
-        Setup and solve the coupled boltzmann equations governing the evolution of the EM temperature and nuetrino temperature
-        in the standard model
-        
-        Params
-        ------
-        T_gam0 - initial electromagnetic plasma temperature
-        T_nu0 - initial nuetrino temp, should probably be equl to T_gam0 unless you want to do some funky shit
-        
-        Returns
-        -------
-        
-        sol - output of scipy.integrate.solve_ivp containing the temperatures of the 2 sectors as a function of time, as well as the scale factor
-        '''
-        
-        def dT(t, vec):
-            T_gam, T_nu, a = vec
-            res = np.array([
-                self.dT_EM_dt_SM(T_gam, T_nu),
-                self.dT_neutrino_dt_SM_correct(T_gam, T_nu),
-                a*Hubble_SM(T_gam, T_nu)
-                
-            ]
-            )
-            return res
-            
-        IC = [T_gam0, T_nu0, 1.0]
-        t0 = 1./(2 * Hubble(T_gam0, T_nu0, 0, 0))[0]
-        t_max = 1e29
-        t_eval = np.geomspace(t0, t_max, 500)
-        
-        sol = solve_ivp(dT, [t0, t_max], IC, t_eval=t_eval, method='BDF', rtol=1e-6, atol=1e-6)
         
         #renormalize scale factors
         scale_factor_end = sol.y[2][-1]
