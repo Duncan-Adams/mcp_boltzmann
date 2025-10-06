@@ -177,9 +177,9 @@ _dg_E_EM_no_nu_I = _g_E_EM_no_nu_I.derivative()
 _g_P_EM_no_nu_I = UnivariateSpline(_T_grid, _g_P_no_nu, k=1, s=0, ext=3)
 
 _T_grid, _g_E, _g_P = _load_gstar(_gstar_dat_path)
-_g_E_EM_I = UnivariateSpline(_T_grid, _g_E_no_nu, k=1, s=0, ext=3)
+_g_E_EM_I = UnivariateSpline(_T_grid, _g_E, k=1, s=0, ext=3)
 _dg_E_EM_I = _g_E_EM_I.derivative()
-_g_P_EM_I = UnivariateSpline(_T_grid, _g_P_no_nu, k=1, s=0, ext=3)
+_g_P_EM_I = UnivariateSpline(_T_grid, _g_P, k=1, s=0, ext=3)
 
 
 def gstar_E_EM(T, T_nu_dec):

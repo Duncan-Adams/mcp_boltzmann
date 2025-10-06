@@ -11,7 +11,7 @@ from scipy.interpolate import interp1d
 import mcp_boltzmann.annihilation as ann
 
     
-def compute_annihilation_rate(m_mcp, T_min, T_max, n_temps, outdir, maxwell_boltzmann=False):
+def compute_annihilation_rate(task, n_temps, outdir, maxwell_boltzmann=False):
     '''
     Compute forwards annhilation collision integral (sm, sm -> mcp, mcp)
     
@@ -30,6 +30,8 @@ def compute_annihilation_rate(m_mcp, T_min, T_max, n_temps, outdir, maxwell_bolt
     
     warnings.filterwarnings('ignore')
     
+    m_mcp, T_min, T_max = task
+    
     MeV = 1
     GeV = 1e3*MeV
     
@@ -43,9 +45,9 @@ def compute_annihilation_rate(m_mcp, T_min, T_max, n_temps, outdir, maxwell_bolt
     m_pi = 139.570 * MeV
     Q = 1.0
     
-    outfile_name = f'mcp_annihilation_rate_m_{args.mass}_Q_1.npz'
+    outfile_name = f'mcp_annihilation_rate_m_{m_mcp}_Q_1.npz'
     if maxwell_boltzmann is True:
-        outfile_name = f'mcp_annihilation_rate_m_{args.mass}_Q_1_MB.npz'
+        outfile_name = f'mcp_annihilation_rate_m_{m_mcp}_Q_1_MB.npz'
     outfile_path = os.path.join(outdir, outfile_name)
     
     if (args.overwrite is False) and os.path.exists(outfile_path):
@@ -55,15 +57,15 @@ def compute_annihilation_rate(m_mcp, T_min, T_max, n_temps, outdir, maxwell_bolt
     Temp_grid = np.geomspace(T_min, T_max, n_temps)
 
     #setup cross sections
-    sigma_ee_ff = partial(ann.sigma_llff, m_mcp = m_mcp, m_l = m_e)
-    sigma_mumu_ff = partial(ann.sigma_llff, m_mcp = m_mcp, m_l = m_mu)
-    sigma_tautau_ff = partial(ann.sigma_llff, m_mcp = m_mcp, m_l = m_tau)
+    sigma_ee_ff = partial(ann.sigma_llff, m_mcp = m_mcp, m_f = m_e)
+    sigma_mumu_ff = partial(ann.sigma_llff, m_mcp = m_mcp, m_f = m_mu)
+    sigma_tautau_ff = partial(ann.sigma_llff, m_mcp = m_mcp, m_f = m_tau)
     
-    sigma_lq_ff = partial(ann.sigma_llff, m_mcp = m_mcp, m_l = 0.0)
-    sigma_ss_ff = partial(ann.sigma_llff, m_mcp = m_mcp, m_l = m_s)
-    sigma_cc_ff = partial(ann.sigma_llff, m_mcp = m_mcp, m_l = m_c)
-    sigma_bb_ff = partial(ann.sigma_llff, m_mcp = m_mcp, m_l = m_b)
-    sigma_tt_ff = partial(ann.sigma_llff, m_mcp = m_mcp, m_l = m_t)
+    sigma_lq_ff = partial(ann.sigma_llff, m_mcp = m_mcp, m_f = 0.0)
+    sigma_ss_ff = partial(ann.sigma_llff, m_mcp = m_mcp, m_f = m_s)
+    sigma_cc_ff = partial(ann.sigma_llff, m_mcp = m_mcp, m_f = m_c)
+    sigma_bb_ff = partial(ann.sigma_llff, m_mcp = m_mcp, m_f = m_b)
+    sigma_tt_ff = partial(ann.sigma_llff, m_mcp = m_mcp, m_f = m_t)
 
     sigma_pipi_ff = partial(ann.sigma_pipi_ff, m_mcp = m_mcp)
 
@@ -161,11 +163,9 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(
                     prog='compute_annihilation.py',
-                    description='tabulateannihilation scattering rates for MCPs')
+                    description='tabulate annihilation rates for MCPs')
 
-    parser.add_argument('mass', action='store', type=float, help='mass in MeV of mcp')
-    parser.add_argument('T_min', action='store', type=float, help='minimum T [MeV] to compute rate at')
-    parser.add_argument('T_max', action='store', type=float, help='minimum T [MeV] to compute rate at')
+    parser.add_argument('mass_list', action='store', type=str, help='filename of csv with mass, T_min, T_max in [MeV]')
     parser.add_argument('n_temps', action='store', type=int, help='number of temperatures in temperature grid')
     parser.add_argument('--maxwell_boltzmann', dest='maxwell_boltzmann', action='store_true', help='assume MB distributions')
     parser.add_argument('--outdir', dest='outdir', action='store', default='./', type=str)
@@ -182,10 +182,10 @@ if __name__ == "__main__":
     if not os.path.exists(args.outdir):
         os.makedirs(args.outdir, exist_ok=True)
         
+    tasks = np.genfromtxt(args.mass_list, delimiter=',', skip_header=2)
+        
     fun_loop = partial(
         compute_annihilation_rate, 
-        T_min = args.T_min,
-        T_max = args.T_max,
         n_temps= args.n_temps,
         outdir = args.outdir,
         maxwell_boltzmann = args.maxwell_boltzmann
@@ -193,10 +193,10 @@ if __name__ == "__main__":
     
     pool = schwimmbad.choose_pool(mpi=args.mpi, processes=args.n_cores)
     
-    mass_array = np.array([args.mass])
+
     
     time_start = time.time()
-    result_total = pool.map(fun_loop, mass_array)
+    result_total = pool.map(fun_loop, tasks)
     time_end = time.time()
 
     pool.close()

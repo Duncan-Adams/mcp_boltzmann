@@ -45,6 +45,7 @@ def p_DS(T_ds, m_mcp):
 def drho_DS_dT(T_ds, m_mcp):
     return drho_gamdT(T_ds) + drhoDM_dT_FD(T_ds, np.zeros_like(T_ds), m_mcp)
 
+@np.vectorize #maybe should replace with heavisides
 def Hubble(T_gam, T_nu, T_ds, m_mcp):
     if T_gam > T_nu_dec:
         rho_tot = rho_EM(T_gam) + rho_DS(T_ds, m_mcp) #above T_nu_dec we inluce neutrinos in EM plasma
@@ -53,6 +54,7 @@ def Hubble(T_gam, T_nu, T_ds, m_mcp):
     
     return np.sqrt((8 * np.pi)/(3 * M_Planck**2) * (rho_tot))
     
+@np.vectorize #maybe should replace with heavisides
 def Hubble_SM(T_gam, T_nu):
     if T_gam > T_nu_dec:
         rho_tot = rho_EM(T_gam) #above T_nu_dec we inluce neutrinos in EM plasma
@@ -143,6 +145,52 @@ class Boltzmann:
         
         return (1/drho_DS_dT(T_ds, self.m_mcp))*(hub_term + col_term)
         
+    # ~ def solve_boltzmann_eq(self, T_gam0, T_nu0, T_ds0):
+        # ~ '''
+        # ~ Setup and solve the coupled boltzmann equations governing the evolution of the EM temperature, nuetrino temperature
+        # ~ and the dark sector temperature, with a massless dark photon and a  millicharged particle of mass self.m_mcp and charge Q
+        
+        # ~ Params
+        # ~ ------
+        # ~ T_gam0 - initial electromagnetic plasma temperature
+        # ~ T_nu0 - initial nuetrino temp, should probably be equl to T_gam0 unless you want to do some funky shit
+        # ~ T_ds0 - initial dark sector temperature
+        # ~ Q - EM charge of millicharged particle
+        
+        # ~ Returns
+        # ~ -------
+        
+        # ~ sol - output of scipy.integrate.solve_ivp containing the temperatures of the 3 sectors as a function of time
+        # ~ '''
+        
+        # ~ def dT(t, vec):
+            # ~ T_gam, T_nu, T_ds = vec
+            # ~ res = np.array([
+                # ~ self.dT_EM_dt(T_gam, T_nu, T_ds)[0],
+                # ~ self.dT_neutrino_dt(T_gam, T_nu, T_ds)[0],
+                # ~ self.dT_DS_dt(T_gam, T_nu, T_ds)[0]
+                # ~ a*Hubble(T_gam, T_nu, T_ds, self.m_mcp)[0]
+            # ~ ]
+            # ~ )
+            # ~ return res
+            
+        # ~ IC = [T_gam0, T_nu0, T_ds0]
+        # ~ t0 = 1./(2 * Hubble(T_gam0, T_nu0, T_ds0, self.m_mcp))[0]
+        # ~ t_max = 1e29
+        # ~ t_eval = np.geomspace(t0, t_max, 500)
+        
+        # ~ sol = solve_ivp(dT, [t0, t_max], IC, t_eval=t_eval, method='BDF', rtol=1e-5, atol=1e-5)
+        
+        # ~ #renormalize scale factors
+        # ~ scale_factor_end = sol.y[3][-1]
+        # ~ T_gam_end = sol.y[0][-1]
+        
+        # ~ rel_scale_factor = 2.7/(T_gam_end*MeV_to_K)
+        
+        # ~ sol.y[3] = sol.y[3]*rel_scale_factor/scale_factor_end
+        
+        # ~ return sol
+        
     def solve_boltzmann_eq(self, T_gam0, T_nu0, T_ds0):
         '''
         Setup and solve the coupled boltzmann equations governing the evolution of the EM temperature, nuetrino temperature
@@ -161,37 +209,66 @@ class Boltzmann:
         sol - output of scipy.integrate.solve_ivp containing the temperatures of the 3 sectors as a function of time
         '''
         
-        def dT(t, vec):
-            T_gam, T_nu, T_ds = vec
+        #stops the solver when the photon temp goes below the neutrino decoupling temp
+        def nu_dec(t, vec):
+            T_gam, T_ds, a = vec
+            
+            return T_gam - T_nu_dec
+        nu_dec.terminal = True
+        
+        def dT_pre_nudec(t, vec):
+            T_gam, T_ds, a = vec
+            T_nu = T_gam
+            res = np.array([
+                self.dT_EM_dt(T_gam, T_nu, T_ds)[0],
+                self.dT_DS_dt(T_gam, T_nu, T_ds)[0],
+                a*Hubble(T_gam, T_nu, T_ds, self.m_mcp)[0]
+            ]
+            )
+            return res
+            
+        def dT_post_nudec(t, vec):
+            T_gam, T_nu, T_ds, a = vec
             res = np.array([
                 self.dT_EM_dt(T_gam, T_nu, T_ds)[0],
                 self.dT_neutrino_dt(T_gam, T_nu, T_ds)[0],
-                self.dT_DS_dt(T_gam, T_nu, T_ds)[0]
-                # ~ a*Hubble(T_gam, T_nu, T_ds, self.m_mcp)[0]
+                self.dT_DS_dt(T_gam, T_nu, T_ds)[0],
+                a*Hubble(T_gam, T_nu, T_ds, self.m_mcp)[0]
             ]
             )
-            # ~ print(res)
-            # ~ print(vec)
-            # ~ print()
-            # ~ print()
             return res
             
-        IC = [T_gam0, T_nu0, T_ds0]
+        
+        IC_0 = [T_gam0, T_ds0, 1.0]
         t0 = 1./(2 * Hubble(T_gam0, T_nu0, T_ds0, self.m_mcp))[0]
         t_max = 1e29
         t_eval = np.geomspace(t0, t_max, 500)
         
-        sol = solve_ivp(dT, [t0, t_max], IC, t_eval=t_eval, method='BDF', rtol=1e-5, atol=1e-5)
+        sol_0 = solve_ivp(dT_pre_nudec, [t0, t_max], IC_0, t_eval=t_eval, events=nu_dec, method='BDF', rtol=1e-5, atol=1e-5)
         
-        #renormalize scale factors
-        # ~ scale_factor_end = sol.y[3][-1]
-        T_gam_end = sol.y[0][-1]
+        T_gam1 = sol_0.y[0][-1]
+        T_ds1 = sol_0.y[1][-1]
+        a_1 = sol_0.y[2][-1]
         
-        # ~ rel_scale_factor = 2.7/(T_gam_end*MeV_to_K)
+        t1 = sol_0.t[-1]
         
-        # ~ sol.y[3] = sol.y[3]*rel_scale_factor/scale_factor_end
+        IC_1 = [T_gam1, T_gam1, T_ds1, a_1]
         
-        return sol
+        sol_1 = solve_ivp(dT_post_nudec, [t1, t_max], IC_1, method='BDF', rtol=1e-5, atol=1e-5)
+        
+        # ~ #renormalize scale factors
+        scale_factor_end = sol_1.y[3][-1]
+        T_gam_end = sol_1.y[0][-1]
+        
+        rel_scale_factor = 2.7/(T_gam_end*MeV_to_K)
+        
+        cosmic_time = np.concatenate((sol_0.t, sol_1.t))
+        T_gam = np.concatenate((sol_0.y[0], sol_1.y[0]))
+        T_nu = np.concatenate((sol_0.y[0], sol_1.y[1]))
+        T_ds = np.concatenate((sol_0.y[1], sol_1.y[2]))
+        scale_factor = np.concatenate((sol_0.y[2], sol_1.y[3]))*(rel_scale_factor/scale_factor_end)
+        
+        return cosmic_time, T_gam, T_nu, T_ds, scale_factor
         
     def solve_boltzmann_eq_SM(self, T_gam0, T_nu0):
         '''
