@@ -213,20 +213,20 @@ def compute_coulomb_rate(temps, m_mcp, n_strat, neval, nitn):
     
     if electroweak:
         #need to sum over each weyl fermion now
-        pref_e_l = Y_e_l**2/(2*q_e**2*c2_theta_w**2)
-        pref_e_r = Y_e_R**2/(2*q_e**2*c2_theta_w**2)
+        pref_e_l = Y_e_l**2/(2*c2_theta_w**2)
+        pref_e_r = Y_e_R**2/(2*c2_theta_w**2)
         
-        pref_u_l = Y_u_l**2/(2*q_u**2*c2_theta_w**2)
-        pref_u_r = Y_u_r**2/(2*q_u**2*c2_theta_w**2)
+        pref_u_l = Y_u_l**2/(2*c2_theta_w**2)
+        pref_u_r = Y_u_r**2/(2*c2_theta_w**2)
         
-        pref_d_l = Y_d_l**2/(2*q_d**2*c2_theta_w**2)
-        pref_d_r = Y_d_r**2/(2*q_d**2*c2_theta_w**2)
+        pref_d_l = Y_d_l**2/(2*c2_theta_w**2)
+        pref_d_r = Y_d_r**2/(2*c2_theta_w**2)
         
         pref_higgs = 4*np.pi*(e**4/c2_theta_w**2)
         
-        pref_lept = 2*pref_e_l + 2*pref_e_r 
-        pref_u = 2*pref_u_l + 2*pref_u_r
-        pref_d = 2*pref_d_l + 2*pref_d_r
+        pref_lept = 16*np.pi*e**4*(2*pref_e_l + 2*pref_e_r)
+        pref_u = 16*np.pi*e**4*(2*pref_u_l + 2*pref_u_r)
+        pref_d = 16*np.pi*e**4*(2*pref_d_l + 2*pref_d_r)
         
         pref_lq = 3*(pref_u + pref_d)
         pref_charm = 3*pref_u
