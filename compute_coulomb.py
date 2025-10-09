@@ -132,6 +132,7 @@ def compute_coulomb_rate(temps, m_mcp, n_strat, neval, nitn):
     result_bot = 0.0
     result_top = 0.0
     result_higgs = 0.0
+    result_nu = 0.0
 
     result_e = rate_int_e.compute_QS(T_sm, T_ds, n_strat=n_strat, neval=neval, nitn=nitn)[0]
     
@@ -199,8 +200,8 @@ def compute_coulomb_rate(temps, m_mcp, n_strat, neval, nitn):
     Y_H = 1/2
     
     Y_e_l = -1/2
-    Y_nu_L = -1/2
-    Y_e_R = -1
+    Y_nu_l = -1/2
+    Y_e_r = -1
     
     #factor to scale the coeeficients by
     pref_lept = 4*16*np.pi*e**4
@@ -210,11 +211,14 @@ def compute_coulomb_rate(temps, m_mcp, n_strat, neval, nitn):
     pref_bot = 4*3*16*np.pi*e**4*(q_b**2)
     pref_top = 4*3*16*np.pi*e**4*(q_t**2)
     pref_higgs = 0.0
+    pref_nu = 0.0
     
     if electroweak:
         #need to sum over each weyl fermion now
         pref_e_l = Y_e_l**2/(2*c2_theta_w**2)
-        pref_e_r = Y_e_R**2/(2*c2_theta_w**2)
+        pref_e_r = Y_e_r**2/(2*c2_theta_w**2)
+        
+        pref_nu_l = Y_nu_l**2/(2*c2_theta_w**2)
         
         pref_u_l = Y_u_l**2/(2*c2_theta_w**2)
         pref_u_r = Y_u_r**2/(2*c2_theta_w**2)
@@ -222,17 +226,20 @@ def compute_coulomb_rate(temps, m_mcp, n_strat, neval, nitn):
         pref_d_l = Y_d_l**2/(2*c2_theta_w**2)
         pref_d_r = Y_d_r**2/(2*c2_theta_w**2)
         
-        pref_higgs = 4*np.pi*(e**4/c2_theta_w**2)
+        #4 higgs degrees of freedom
+        pref_higgs = 4*4*np.pi*(e**4/c2_theta_w**2)
         
-        pref_lept = 16*np.pi*e**4*(2*pref_e_l + 2*pref_e_r)
-        pref_u = 16*np.pi*e**4*(2*pref_u_l + 2*pref_u_r)
-        pref_d = 16*np.pi*e**4*(2*pref_d_l + 2*pref_d_r)
+        pref_lept = 4*16*np.pi*e**4*(pref_e_l + pref_e_r)
+        pref_u = 4*3*16*np.pi*e**4*(pref_u_l + pref_u_r)
+        pref_d = 4*3*16*np.pi*e**4*(pref_d_l + pref_d_r)
         
-        pref_lq = 3*(pref_u + pref_d)
-        pref_charm = 3*pref_u
-        pref_strange = 3*pref_d
-        pref_top = 3*pref_u
-        pref_bot = 3*pref_d
+        pref_nu = 2*6*16*np.pi*e**4*pref_nu_l
+        
+        pref_lq = (pref_u + pref_d)
+        pref_charm = pref_u
+        pref_strange = pref_d
+        pref_top = pref_u
+        pref_bot = pref_d
         
     
     result_total = (
@@ -243,6 +250,7 @@ def compute_coulomb_rate(temps, m_mcp, n_strat, neval, nitn):
       + pref_bot*result_bot
       + pref_top*result_top
       + pref_higgs*result_higgs
+      + pref_nu*result_e
     )
     
     return result_total
