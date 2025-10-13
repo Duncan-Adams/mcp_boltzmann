@@ -41,18 +41,29 @@ def save_results(task_result):
     outdir = task['outdir']
     do_plots = task['do_plots']
     
-    result_dir = os.path.join(outdir, f'm_{m_mcp}_Q_{Q}/')
+    result_dir = os.path.join(outdir, f'm_{m_mcp}/Q_{Q}/')
     
     if (not os.path.exists(result_dir)):
         os.makedirs(result_dir, exist_ok=True)
     
     Boltz, sol_sm, sol_bsm = result
     
-    N_eff_bsm = Boltz.N_eff(sol_bsm.y[0][-1], sol_bsm.y[1][-1], sol_bsm.y[2][-1])
-    N_eff_sm = Boltz.N_eff_SM(sol_sm.y[0][-1], sol_sm.y[1][-1])
+    time_sm = sol_sm[0]
+    T_gam_sm = sol_sm[1]
+    T_nu_sm = sol_sm[2]
+    sf_sm = sol_sm[3]
+    
+    time_bsm = sol_bsm[0]
+    T_gam_bsm = sol_bsm[1]
+    T_nu_bsm = sol_bsm[2]
+    T_dark_bsm = sol_bsm[3]
+    sf_bsm = sol_bsm[4]
+    
+    N_eff_bsm = Boltz.N_eff(T_gam_sm[-1], T_nu_sm[-1], T_dark_bsm[-1])
+    N_eff_sm = Boltz.N_eff_SM(T_gam_sm[-1], T_nu_sm[-1])
     Delta_Neff = N_eff_bsm - N_eff_sm 
     
-    DNeff_dso = Boltz.Delta_Neff_ds_only(sol_bsm.y[0][-1], sol_bsm.y[2][-1], m_mcp)
+    DNeff_dso = Boltz.Delta_Neff_ds_only(T_gam_sm[-1], T_dark_bsm[-1], m_mcp)
     
     with open(os.path.join(result_dir, 'result.txt'), 'w') as out_txt:
         print(f'{m_mcp=}', file=out_txt)
@@ -63,8 +74,8 @@ def save_results(task_result):
         print(f'{Delta_Neff=}', file=out_txt)
         
     if do_plots is True:
-        plt.plot(sol_sm.t, sol_sm.y[0], label=r'T$_\gamma$')
-        plt.plot(sol_sm.t, sol_sm.y[1], label=r'T$_\nu$')
+        plt.plot(time_sm, T_gam_sm, label=r'T$_\gamma$')
+        plt.plot(time_sm, T_nu_sm, label=r'T$_\nu$')
         plt.yscale('log')
         plt.xscale('log')
         
@@ -75,12 +86,12 @@ def save_results(task_result):
         plt.cla()
         ################################################################################################################
         
-        plt.plot(sol_bsm.t, sol_bsm.y[0], label=r'T$_\gamma$')
-        plt.plot(sol_bsm.t, sol_bsm.y[1], label=r'T$_{\nu}$')
-        plt.plot(sol_bsm.t, sol_bsm.y[2], label=r'T$_{\rm ds}$')
+        plt.plot(time_bsm, T_gam_bsm, label=r'T$_\gamma$')
+        plt.plot(time_bsm, T_nu_bsm, label=r'T$_{\nu}$')
+        plt.plot(time_bsm, T_dark_bsm, label=r'T$_{\rm ds}$')
         
-        plt.plot(sol_bsm.t, sol_bsm.y[0][0]*np.sqrt(sol_bsm.t[0]/sol_bsm.t), linestyle='dashed', color='black', alpha=0.5)
-        plt.plot(sol_bsm.t, sol_bsm.y[1][-1]*np.sqrt(sol_bsm.t[-1]/sol_bsm.t), linestyle='dashed', color='black', alpha=0.5)
+        plt.plot(time_bsm, T_gam_bsm[0]*np.sqrt(time_bsm[0]/time_bsm), linestyle='dashed', color='black', alpha=0.5)
+        plt.plot(time_bsm, T_nu_bsm[-1]*np.sqrt(time_bsm[-1]/time_bsm), linestyle='dashed', color='black', alpha=0.5)
         
         plt.yscale('log')
         plt.xscale('log')
@@ -91,8 +102,8 @@ def save_results(task_result):
         plt.savefig(os.path.join(result_dir, 'temp_bsm.png'))
         plt.cla()
         ################################################################################################################
-        plt.plot(sol_bsm.t, sol_bsm.y[1]/sol_bsm.y[0], label=r'T$_\nu$/T$_\gamma$')
-        plt.plot(sol_bsm.t, sol_bsm.y[2]/sol_bsm.y[0], label=r'T$_{\rm dark}$/T$_\gamma$')
+        plt.plot(time_bsm, T_nu_bsm/T_gam_bsm, label=r'T$_\nu$/T$_\gamma$')
+        plt.plot(time_bsm, T_dark_bsm/T_gam_bsm, label=r'T$_{\rm dark}$/T$_\gamma$')
         plt.xscale('log')
         
         plt.xlabel('Time [GeV$^{-1}$]')
@@ -102,10 +113,10 @@ def save_results(task_result):
         plt.savefig(os.path.join(result_dir, 'temp_ratio.png'))
         plt.cla()
         ################################################################################################################
-        plt.plot(sol_bsm.y[0], Boltz.colterms_EM_DS[0](sol_bsm.y[0], sol_bsm.y[2], Q)/sol_bsm.y[0]**6, label='annihilation')
-        plt.plot(sol_bsm.y[0], Boltz.colterms_EM_DS[1](sol_bsm.y[0], sol_bsm.y[2], Q)/sol_bsm.y[0]**6, label='scattering')
-        plt.plot(sol_bsm.y[0], Boltz.colterms_EM_DS[2](sol_bsm.y[0], sol_bsm.y[2], Q)/sol_bsm.y[0]**6, label='Plasmon Decay')
-        plt.plot(sol_bsm.y[0], Boltz.colterms_EM_DS[3](sol_bsm.y[0], sol_bsm.y[2], Q)/sol_bsm.y[0]**6, label='Z decay')
+        plt.plot(T_gam_bsm, Boltz.colterms_EM_DS[0](T_gam_bsm, T_dark_bsm, Q)/T_gam_bsm**6, label='annihilation')
+        plt.plot(T_gam_bsm, Boltz.colterms_EM_DS[1](T_gam_bsm, T_dark_bsm, Q)/T_gam_bsm**6, label='scattering')
+        plt.plot(T_gam_bsm, Boltz.colterms_EM_DS[2](T_gam_bsm, T_dark_bsm, Q)/T_gam_bsm**6, label='Plasmon Decay')
+        plt.plot(T_gam_bsm, Boltz.colterms_EM_DS[3](T_gam_bsm, T_dark_bsm, Q)/T_gam_bsm**6, label='Z decay')
         plt.xscale('log')
         plt.yscale('log')
         plt.ylim(1e-27, 1e-22)
@@ -120,18 +131,13 @@ def save_results(task_result):
         
     return 
         
-        
-def load_ann_rate(path):
-    with np.load(path) as rate_file:
-        return interp1d(rate_file['Temp_grid'], rate_file['rate'], bounds_error=False, fill_value=0)
-
 def compute_neff(m_mcp, Q):
     MeV = 1
     GeV = 1e3
     
     #load energy transfter rates
-    _CF_ff_xx_I = load_ann_rate(f'./output/rates/annihilation/ann_m_{m_mcp}_Q_1.npz')
-    mcp_coulomb_rate = elscat.load_tabulated_rate(f'./output/rates/coulomb/mcp_coulomb_rate_m_{m_mcp}_Q_1.npz')
+    _CF_ff_xx_I = ann.load_ann_rate(f'./output/rates/annihilation/ann_m_{m_mcp}_Q_1.npz')
+    mcp_coulomb_rate = elscat.load_tabulated_rate(f'./output/rates/coulomb/cluster/mcp_coulomb_rate_m_{m_mcp}_Q_1.npz')
     
     def CF_ann(T, Q):
         return Q**2*_CF_ff_xx_I(T)
@@ -151,19 +157,20 @@ def compute_neff(m_mcp, Q):
     def CF_Z_decay(T_sm, T_ds, Q):
         return plas.C_Z_decay(T_sm, T_ds, m_mcp, Q)
         
-    Boltz = Boltzmann(m_mcp)
+    Boltz = Boltzmann(m_mcp, Q)
     Boltz.add_colterm_EM_DS(CF_ann_sm_ds)
     Boltz.add_colterm_EM_DS(CF_scatt_sm_ds)
     Boltz.add_colterm_EM_DS(CF_plas)
     Boltz.add_colterm_EM_DS(CF_Z_decay)
     
     #initial conditions
-    T_gamma_0 = 1e6 * MeV
+    T_gamma_0 = 100*m_mcp
     T_nu_0 = T_gamma_0
+    # ~ T_gamma_0 = 1e6 * MeV
     T_DS_0 = 1e-4*T_gamma_0
     
     sol_sm = Boltz.solve_boltzmann_eq_SM(T_gamma_0, T_nu_0)
-    sol_bsm = Boltz.solve_boltzmann_eq(T_gamma_0, T_nu_0, T_DS_0, Q)
+    sol_bsm = Boltz.solve_boltzmann_eq(T_gamma_0, T_nu_0, T_DS_0)
     
     #should return the boltzman solver instance and the sm and bsm solutions
     return Boltz, sol_sm, sol_bsm
