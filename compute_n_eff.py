@@ -192,6 +192,7 @@ def compute_neff(m_mcp, Q):
     T_gamma_0 = 100*m_mcp
     T_nu_0 = T_gamma_0
     T_DS_0 = 1e-4*T_gamma_0 #need to calculate this more inelligently
+    print(Boltz.guess_initial_dark_temp(T_gamma_0))
     
     sol_sm = Boltz.solve_boltzmann_eq_SM(T_gamma_0, T_nu_0)
     sol_bsm = Boltz.solve_boltzmann_eq(T_gamma_0, T_nu_0, T_DS_0)

@@ -443,7 +443,16 @@ class Boltzmann:
         scale_factor = np.concatenate((sol_0.y[1], sol_1.y[2]))*(rel_scale_factor/scale_factor_end)
 
         return cosmic_time, T_gam, T_nu, scale_factor
-            
+          
+    def guess_initial_dark_temp(self, T_gam0):
+        T_dark_test = np.geomspace(1e-4*T_gam0, 1.1*T_gam0)
+        R = 4*boltzmann.Hubble(T_gam0, T_gam0, T_dark_test, m_mcp)*rho_DS(T_dark_test, m_mcp)/np.abs(self.colterm_EM_DS(T_gam0, T_dark_test))
+        id_initial_T_dark = (np.abs(np.log10(R))).argmin() #find where R = 1
+        
+        T_dark_inital = np.min(T_dark_test[id_initial_T_dark], T_gam0)
+        
+        return T_dark_inital
+        
     def N_eff(self, T_gam, T_nu, T_ds):
         return (8/7)*(11/4)**(4/3)*((rho_neutrino(T_nu) + rho_DS(T_ds, self.m_mcp))/rho_EM(T_gam))
 
