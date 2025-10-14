@@ -446,7 +446,7 @@ class Boltzmann:
           
     def guess_initial_dark_temp(self, T_gam0):
         T_dark_test = np.geomspace(1e-4*T_gam0, 1.1*T_gam0)
-        R = 4*boltzmann.Hubble(T_gam0, T_gam0, T_dark_test, m_mcp)*rho_DS(T_dark_test, m_mcp)/np.abs(self.colterm_EM_DS(T_gam0, T_dark_test))
+        R = 4*Hubble(T_gam0, T_gam0, T_dark_test, m_mcp)*rho_DS(T_dark_test, m_mcp)/np.abs(self.colterm_EM_DS(T_gam0, T_dark_test))
         id_initial_T_dark = (np.abs(np.log10(R))).argmin() #find where R = 1
         
         T_dark_inital = np.min(T_dark_test[id_initial_T_dark], T_gam0)
