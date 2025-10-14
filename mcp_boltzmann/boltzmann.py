@@ -270,6 +270,8 @@ class Boltzmann:
         
         sol_0 = solve_ivp(dT_pre_nudec, [t0, t_max], IC_0, t_eval=t_eval, events=nu_dec, method='BDF', rtol=1e-5, atol=1e-5)
         
+        print(sol_0.message)
+        
         T_gam1 = sol_0.y[0][-1]
         T_ds1 = sol_0.y[1][-1]
         a_1 = sol_0.y[2][-1]

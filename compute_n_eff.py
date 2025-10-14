@@ -73,6 +73,16 @@ def save_results(task_result):
         print(f'{DNeff_dso=}', file=out_txt)
         print(f'{Delta_Neff=}', file=out_txt)
         
+    np.savez_compressed(
+        os.path.join(result_dir, 'result.npz'),
+        m_mcp = m_mcp,
+        Q = Q,
+        N_eff_sm = N_eff_sm,
+        N_eff_bsm = N_eff_bsm[0],
+        DNeff_dso = DNeff_dso[0],
+        Delta_Neff = Delta_Neff[0]
+        )
+        
     if do_plots is True:
         plt.plot(time_sm, T_gam_sm, label=r'T$_\gamma$')
         plt.plot(time_sm, T_nu_sm, label=r'T$_\nu$')
@@ -104,10 +114,25 @@ def save_results(task_result):
         ################################################################################################################
         plt.plot(time_bsm, T_nu_bsm/T_gam_bsm, label=r'T$_\nu$/T$_\gamma$')
         plt.plot(time_bsm, T_dark_bsm/T_gam_bsm, label=r'T$_{\rm dark}$/T$_\gamma$')
+        plt.axhline(T_nu_sm[-1]/T_gam_sm[-1], color='black', linestyle='dashed', alpha=0.7)
         plt.xscale('log')
         
-        plt.xlabel('Time [GeV$^{-1}$]')
+        plt.xlabel('Time [MeV$^{-1}$]')
         plt.title('Temperature Ratio')
+        plt.legend()
+        
+        plt.savefig(os.path.join(result_dir, 'temp_ratio_time.png'))
+        plt.cla()
+        ################################################################################################################
+        plt.plot(T_gam_bsm, T_nu_bsm/T_gam_bsm, label=r'T$_\nu$/T$_\gamma$')
+        plt.plot(T_gam_bsm, T_dark_bsm/T_gam_bsm, label=r'T$_{\rm dark}$/T$_\gamma$')
+        plt.axhline(T_nu_sm[-1]/T_gam_sm[-1], color='black', linestyle='dashed', alpha=0.7)
+        plt.axhline(1.0, color='black', alpha=0.3)
+        plt.xscale('log')
+        
+        plt.xlabel(r'T$_\gamma$ [MeV]')
+        plt.title('Temperature Ratio')
+        plt.gca().invert_xaxis()
         plt.legend()
         
         plt.savefig(os.path.join(result_dir, 'temp_ratio.png'))
@@ -136,7 +161,7 @@ def compute_neff(m_mcp, Q):
     GeV = 1e3
     
     #load energy transfter rates
-    _CF_ff_xx_I = ann.load_ann_rate(f'./output/rates/annihilation/ann_m_{m_mcp}_Q_1.npz')
+    _CF_ff_xx_I = ann.load_ann_rate(f'./output/rates/annihilation/mcp_annihilation_rate_m_{m_mcp}_Q_1.npz')
     mcp_coulomb_rate = elscat.load_tabulated_rate(f'./output/rates/coulomb/cluster/mcp_coulomb_rate_m_{m_mcp}_Q_1.npz')
     
     def CF_ann(T, Q):
@@ -166,8 +191,7 @@ def compute_neff(m_mcp, Q):
     #initial conditions
     T_gamma_0 = 100*m_mcp
     T_nu_0 = T_gamma_0
-    # ~ T_gamma_0 = 1e6 * MeV
-    T_DS_0 = 1e-4*T_gamma_0
+    T_DS_0 = 1e-4*T_gamma_0 #need to calculate this more inelligently
     
     sol_sm = Boltz.solve_boltzmann_eq_SM(T_gamma_0, T_nu_0)
     sol_bsm = Boltz.solve_boltzmann_eq(T_gamma_0, T_nu_0, T_DS_0)
