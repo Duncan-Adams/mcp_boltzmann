@@ -41,7 +41,7 @@ def save_results(task_result):
     outdir = task['outdir']
     do_plots = task['do_plots']
     
-    result_dir = os.path.join(outdir, f'm_{m_mcp}/Q_{Q}/')
+    result_dir = os.path.join(outdir, f'm_{m_mcp}/Q_{Q:.3e}/')
     
     if (not os.path.exists(result_dir)):
         os.makedirs(result_dir, exist_ok=True)
@@ -182,7 +182,10 @@ if __name__ == "__main__":
                     prog='compute_coulomb.py',
                     description='tabulate coulomb scattering rates for MCPs')
 
-    parser.add_argument('model_params', action='store', type=str, help='file containing masses in MeV of milli-charged particle, and millicharges')
+    parser.add_argument('mass', action='store', type=float, help='mass of millicharge particle in MeV')
+    parser.add_argument('Q_min', action='store', type=float, help='minimum value of millicharge to scan over')
+    parser.add_argument('Q_max', action='store', type=float, help='maximum value of millicharge to scan over')
+    parser.add_argument('num_Q', action='store', type=int, help='number of geometrically spaced millicharges in scan')
     parser.add_argument('--save_plots', dest='do_plots', action='store_true')
     parser.add_argument('--outdir', dest='outdir', action='store', default='./', type=str)
 
@@ -199,13 +202,13 @@ if __name__ == "__main__":
     pool = schwimmbad.choose_pool(mpi=args.mpi, processes=args.n_cores)
     
     # read in list of models
-    param_points = np.genfromtxt(args.model_params, delimiter=',')
-    tasks = [dict()]*len(param_points)
+    Q_range = np.geomspace(args.Q_min, args.Q_max, args.num_Q)
+    tasks = [dict()]*len(Q_range)
     
-    for (i, p) in enumerate(param_points):
+    for (i, Q) in enumerate(Q_range):
         td = {
-            'mass': p[0],
-            'Q': p[1],
+            'mass': args.mass,
+            'Q': Q,
             'outdir': args.outdir,
             'do_plots': args.do_plots
         }
