@@ -12,7 +12,7 @@ from scipy.interpolate import interp1d
 import mcp_boltzmann.elastic_scattering as elscat
 import mcp_boltzmann.plasma as plas
 from mcp_boltzmann import annihilation as ann
-from mcp_boltzmann.boltzmann import Boltzmann
+from mcp_boltzmann.boltzmann import MCPBoltzmann
 
 
 def worker(task):
@@ -182,7 +182,7 @@ def compute_neff(m_mcp, Q):
     def CF_Z_decay(T_sm, T_ds, Q):
         return plas.C_Z_decay(T_sm, T_ds, m_mcp, Q)
         
-    Boltz = Boltzmann(m_mcp, Q)
+    Boltz = MCPBoltzmann(m_mcp, Q)
     Boltz.add_colterm_EM_DS(CF_ann_sm_ds)
     Boltz.add_colterm_EM_DS(CF_scatt_sm_ds)
     Boltz.add_colterm_EM_DS(CF_plas)
