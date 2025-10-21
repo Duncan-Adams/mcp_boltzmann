@@ -69,7 +69,7 @@ def setup_coulomb_integrals(m_mcp, mgam):
         "rate_higgs": coulomb_higgs
         } 
     
-def compute_coulomb_rate(temps, m_mcp, n_strat, neval, nitn):
+def compute_coulomb_rate(temps, m_mcp, n_strat, neval, nitn, MB=False):
     '''
     Compute coulomb scattering collision integral with sm fermions for an mcp of mass M at millicharge = 1.0
     
@@ -134,47 +134,47 @@ def compute_coulomb_rate(temps, m_mcp, n_strat, neval, nitn):
     result_higgs = 0.0
     result_nu = 0.0
 
-    result_e = rate_int_e.compute_QS(T_sm, T_ds, n_strat=n_strat, neval=neval, nitn=nitn)[0]
+    result_e = rate_int_e.compute(T_sm, T_ds, n_strat=n_strat, neval=neval, nitn=nitn, MB)[0]
     
     if electroweak:
-        result_higgs = rate_int_higgs.compute_QS(T_sm, T_ds, n_strat=n_strat, neval=neval, nitn=nitn)[0]
+        result_higgs = rate_int_higgs.compute(T_sm, T_ds, n_strat=n_strat, neval=neval, nitn=nitn, MB)[0]
     
     if T_sm > m_mu/30.0:
         if T_sm > 5*m_mu:
             result_mu = result_e
         else:
-            result_mu = rate_int_mu.compute_QS(T_sm, T_ds, n_strat=n_strat, neval=neval, nitn=nitn)[0]
+            result_mu = rate_int_mu.compute(T_sm, T_ds, n_strat=n_strat, neval=neval, nitn=nitn, MB)[0]
         
     if T_sm > m_tau/30.0:
         if T_sm > 5*m_tau:
             result_tau = result_e
         else:
-            result_tau = rate_int_tau.compute_QS(T_sm, T_ds, n_strat=n_strat, neval=neval, nitn=nitn)[0]
+            result_tau = rate_int_tau.compute(T_sm, T_ds, n_strat=n_strat, neval=neval, nitn=nitn, MB)[0]
         
     if T_sm > LQCD:
-        result_lq = rate_int_lq.compute_QS(T_sm, T_ds, n_strat=n_strat, neval=neval, nitn=nitn)[0]
+        result_lq = rate_int_lq.compute(T_sm, T_ds, n_strat=n_strat, neval=neval, nitn=nitn, MB)[0]
         
         if T_sm > 5*m_s:
             result_strange = result_lq
         else:
-            result_strange = rate_int_strange.compute_QS(T_sm, T_ds, n_strat=n_strat, neval=neval, nitn=nitn)[0]
+            result_strange = rate_int_strange.compute(T_sm, T_ds, n_strat=n_strat, neval=neval, nitn=nitn, MB)[0]
             
         if T_sm > 5*m_c:
             result_charm = result_lq
         else:
-            result_charm = rate_int_charm.compute_QS(T_sm, T_ds, n_strat=n_strat, neval=neval, nitn=nitn)[0]
+            result_charm = rate_int_charm.compute(T_sm, T_ds, n_strat=n_strat, neval=neval, nitn=nitn, MB)[0]
         
         if T_sm > m_b/30.0:
             if T_sm > 5*m_b:
                 result_bot = result_lq
             else:
-                result_bot = rate_int_bot.compute_QS(T_sm, T_ds, n_strat=n_strat, neval=neval, nitn=nitn)[0]
+                result_bot = rate_int_bot.compute(T_sm, T_ds, n_strat=n_strat, neval=neval, nitn=nitn, MB)[0]
             
         if T_sm > m_t/30.0:
             if T_sm > 5*m_t:
                 result_top = result_lq
             else:
-                result_top = rate_int_top.compute_QS(T_sm, T_ds, n_strat=n_strat, neval=neval, nitn=nitn)[0]
+                result_top = rate_int_top.compute(T_sm, T_ds, n_strat=n_strat, neval=neval, nitn=nitn, MB)[0]
         
             
     #compute prefactors, dont include millicharge since all processes rescale with the millicharge
@@ -398,6 +398,7 @@ if __name__ == "__main__":
     parser.add_argument('Tm_max', action='store', type=float, help='maximum T in units of mass to compute rates at')
     parser.add_argument('n_temps', action='store', type=int, help='number of temperatures in temperature grid')
     parser.add_argument('--forwards', action='store_true', help='compute forwards rate only')
+    parser.add_argument('--maxwell_boltzmann', dest='MB', action='store_true', help='compute using MB distributions')
     parser.add_argument('--outdir', dest='outdir', action='store', default='./', type=str)
     parser.add_argument('--overwrite', dest='overwrite', action='store_true')
 
@@ -428,10 +429,14 @@ if __name__ == "__main__":
         m_mcp=args.mass,
         n_strat=([3]+[3]), 
         neval=1e3, 
-        nitn=10
+        nitn=10,
+        MB=args.MB
     )
     
     if args.forwards is True:
+        if args.MB is True:
+            print('Warning, forward rates not implemented with MB distributions')
+            exit()
         fun_loop = partial(
             compute_coulomb_rate_forwards, 
             m_mcp=args.mass,

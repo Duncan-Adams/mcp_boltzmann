@@ -274,3 +274,10 @@ class ElasticCollisionIntegral:
         sdev = pref*int_result.sdev
 
         return (res, sdev, int_result.Q, int_result)
+        
+    #TODO should make a function to do forwards MB rates
+    def compute(self, T_a, T_b, n_strat=([3] + [3]), neval=1e4, nitn=30, nproc=1, MB=False):
+        if MB is True:
+            return self.compute_MB(T_a, T_b, n_strat=([3] + [3]), neval=1e4, nitn=30, nproc=1)
+
+        return self.compute_QS(T_a, T_b, n_strat=([3] + [3]), neval=1e4, nitn=30, nproc=1)
