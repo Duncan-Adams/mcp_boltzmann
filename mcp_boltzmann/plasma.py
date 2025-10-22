@@ -96,15 +96,16 @@ def C_plasmon(T_sm, T_ds, m_mcp, Q_mcp):
     #of 2 compared to vogel and redondo
     mg2 = m_gam_2(T_sm)
     
-    arg_sqrt = np.nan_to_num((1 - 4*m_mcp**2/mg2)) #this is fine b/c arg_sqrt will nan wehn mgam=0, but this will cause the whole rate to evaluate to 0, which it should at mgam=0
+    #this is fine b/c arg_sqrt will nan when mgam=0, but this will cause the whole rate to evaluate to 0, which it should at mgam=0
+    arg_sqrt = np.nan_to_num((1 - 4*m_mcp**2/mg2)) 
     sq = np.sqrt(arg_sqrt*np.heaviside(arg_sqrt, 0))
 
     return ((1/3)*alpha*Q_mcp**2)*(mg2 + 2*m_mcp**2)*sq*(n_gam(T_sm) - n_gam(T_ds))
     
 def C_plasmon_forwards(T_sm, m_mcp, Q_mcp):
     mg2 = m_gam_2(T_sm)
-    
-    arg_sqrt = np.nan_to_num((1 - 4*m_mcp**2/mg2)) #this is fine b/c arg_sqrt will nan wehn mgam=0, but this will cause the whole rate to evaluate to 0, which it should at mgam=0
+    #this is fine b/c arg_sqrt will nan when mgam=0, but this will cause the whole rate to evaluate to 0, which it should at mgam=0
+    arg_sqrt = np.nan_to_num((1 - 4*m_mcp**2/mg2)) 
     sq = np.sqrt(arg_sqrt*np.heaviside(arg_sqrt, 0))
 
     return ((1/3)*alpha*Q_mcp**2)*(mg2 + 2*m_mcp**2)*sq*n_gam(T_sm) 

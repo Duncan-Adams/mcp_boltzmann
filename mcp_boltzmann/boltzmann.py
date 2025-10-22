@@ -22,11 +22,13 @@ T_nu_dec = 3.0
     
 
 class MCPBoltzmann:
-    def __init__(self, m_mcp, Q):
+    def __init__(self, m_mcp, Q, rtol=1e-5, atol=1e-5):
         self.m_mcp = m_mcp
         self.Q = Q
         self.colterms_EM_NU = [] #collision terms between em sector and nuetrino sector
         self.colterms_EM_DS = [] #collision terms between em sector and dark sector
+        self.rtol = 1e-5
+        self.atol=1e-5
         
     def rho_EM(self, T_gam):
         return (np.pi**2/30)*gstar_E_EM(T_gam, T_nu_dec)*T_gam**4
@@ -210,7 +212,7 @@ class MCPBoltzmann:
         t_max = 1e29
         t_eval = np.geomspace(t0, t_max, 500)
         
-        sol_0 = solve_ivp(dT_pre_nudec, [t0, t_max], IC_0, t_eval=t_eval, events=nu_dec, method='BDF', rtol=1e-5, atol=1e-5)
+        sol_0 = solve_ivp(dT_pre_nudec, [t0, t_max], IC_0, t_eval=t_eval, events=nu_dec, method='BDF', rtol=self.rtol, atol=self.atol)
         
         T_gam1 = sol_0.y[0][-1]
         T_ds1 = sol_0.y[1][-1]
@@ -220,7 +222,7 @@ class MCPBoltzmann:
         
         IC_1 = [T_gam1, T_gam1, T_ds1, a_1]
         
-        sol_1 = solve_ivp(dT_post_nudec, [t1, t_max], IC_1, method='BDF', rtol=1e-5, atol=1e-5)
+        sol_1 = solve_ivp(dT_post_nudec, [t1, t_max], IC_1, method='BDF', rtol=self.rtol, atol=self.atol)
         
         # ~ #renormalize scale factors
         scale_factor_end = sol_1.y[3][-1]
@@ -291,7 +293,7 @@ class MCPBoltzmann:
         t_max = 1e29
         t_eval = np.geomspace(t0, t_max, 500)
         
-        sol_0 = solve_ivp(dT_pre_nudec, [t0, t_max], IC_0, t_eval=t_eval, events=nu_dec, method='BDF', rtol=1e-6, atol=1e-6)
+        sol_0 = solve_ivp(dT_pre_nudec, [t0, t_max], IC_0, t_eval=t_eval, events=nu_dec, method='BDF', rtol=self.rtol, atol=self.atol)
         
         T_gam1 = np.exp(sol_0.y[0][-1])
         T_ds1 = np.exp(sol_0.y[1][-1])
@@ -301,7 +303,7 @@ class MCPBoltzmann:
         
         IC_1 = [T_gam1, T_gam1, T_ds1, a_1]
         
-        sol_1 = solve_ivp(dT_post_nudec, [t1, t_max], IC_1, method='BDF', rtol=1e-6, atol=1e-6)
+        sol_1 = solve_ivp(dT_post_nudec, [t1, t_max], IC_1, method='BDF', rtol=self.rtol, atol=self.atol)
         
         # ~ #renormalize scale factors
         scale_factor_end = sol_1.y[3][-1]
@@ -361,7 +363,7 @@ class MCPBoltzmann:
         t_max = 1e29
         t_eval = np.geomspace(t0, t_max, 500)
         
-        sol_0 = solve_ivp(dT_pre_nudec, [t0, t_max], IC, t_eval=t_eval, events=nu_dec, method='BDF', rtol=1e-5, atol=1e-5)
+        sol_0 = solve_ivp(dT_pre_nudec, [t0, t_max], IC, t_eval=t_eval, events=nu_dec, method='BDF', rtol=self.rtol, atol=self.atol)
         
         T_gam1 = sol_0.y[0][-1]
         a_1 = sol_0.y[1][-1]
@@ -369,7 +371,7 @@ class MCPBoltzmann:
         
         IC_1 = [T_gam1, T_gam1, a_1]
         
-        sol_1 = solve_ivp(dT_post_nudec, [t1, t_max], IC_1, method='BDF', rtol=1e-5, atol=1e-5)
+        sol_1 = solve_ivp(dT_post_nudec, [t1, t_max], IC_1, method='BDF', rtol=self.rtol, atol=self.atol)
         
         #renormalize scale factors
         scale_factor_end = sol_1.y[2][-1]
@@ -405,12 +407,14 @@ class MCPBoltzmann:
 
 
 class ADMBoltzmann(MCPBoltzmann):
-    def __init__(self, m_de, m_dp, Q):
+    def __init__(self, m_de, m_dp, Q, rtol=1e-5, atol=1e-5):
         self.m_de = m_de
         self.m_dp = m_dp
         self.Q = Q
         self.colterms_EM_NU = [] #collision terms between em sector and nuetrino sector
         self.colterms_EM_DS = [] #collision terms between em sector and dark sector
+        self.rtol = 1e-5
+        self.atol=1e-5
         
     def rho_DS(self, T_ds):
         return rho_gam(T_ds) + rhoDM_FD(T_ds, np.zeros_like(T_ds), self.m_de) + rhoDM_FD(T_ds, np.zeros_like(T_ds), self.m_dp)

@@ -78,6 +78,10 @@ def save_results(task_result):
         print(f'{N_eff_bsm=}', file=out_txt)
         print(f'{DNeff_dso=}', file=out_txt)
         print(f'{Delta_Neff=}', file=out_txt)
+        print(f'{T_nu_sm[-1]/T_gam_sm[-1]=}', file=out_txt)
+        print(f'{T_nu_bsm[-1]/T_gam_bsm[-1]=}', file=out_txt)
+        print(f'{T_dark_bsm[-1]/T_gam_bsm[-1]=}', file=out_txt)
+        print(f'{T_gam_sm[-1]/T_gam_bsm[-1]=}', file=out_txt)
         
     np.savez_compressed(
         os.path.join(result_dir, 'result.npz'),
@@ -211,7 +215,7 @@ def compute_neff(m_de, m_dp, Q):
     def CF_Z_decay(T_sm, T_ds, Q):
         return plas.C_Z_decay(T_sm, T_ds, m_de, Q) + plas.C_Z_decay(T_sm, T_ds, m_dp, Q) 
         
-    Boltz = ADMBoltzmann(m_de, m_dp, Q)
+    Boltz = ADMBoltzmann(m_de, m_dp, Q, rtol=1e-6, atol=1e-6)
     Boltz.add_colterm_EM_DS(CF_ann_sm_ds)
     Boltz.add_colterm_EM_DS(CF_scatt_sm_ds)
     Boltz.add_colterm_EM_DS(CF_plas)
