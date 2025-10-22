@@ -134,47 +134,47 @@ def compute_coulomb_rate(temps, m_mcp, n_strat, neval, nitn, MB=False):
     result_higgs = 0.0
     result_nu = 0.0
 
-    result_e = rate_int_e.compute(T_sm, T_ds, n_strat=n_strat, neval=neval, nitn=nitn, MB)[0]
+    result_e = rate_int_e.compute(T_sm, T_ds, n_strat=n_strat, neval=neval, nitn=nitn, MB=MB)[0]
     
     if electroweak:
-        result_higgs = rate_int_higgs.compute(T_sm, T_ds, n_strat=n_strat, neval=neval, nitn=nitn, MB)[0]
+        result_higgs = rate_int_higgs.compute(T_sm, T_ds, n_strat=n_strat, neval=neval, nitn=nitn, MB=MB)[0]
     
     if T_sm > m_mu/30.0:
         if T_sm > 5*m_mu:
             result_mu = result_e
         else:
-            result_mu = rate_int_mu.compute(T_sm, T_ds, n_strat=n_strat, neval=neval, nitn=nitn, MB)[0]
+            result_mu = rate_int_mu.compute(T_sm, T_ds, n_strat=n_strat, neval=neval, nitn=nitn, MB=MB)[0]
         
     if T_sm > m_tau/30.0:
         if T_sm > 5*m_tau:
             result_tau = result_e
         else:
-            result_tau = rate_int_tau.compute(T_sm, T_ds, n_strat=n_strat, neval=neval, nitn=nitn, MB)[0]
+            result_tau = rate_int_tau.compute(T_sm, T_ds, n_strat=n_strat, neval=neval, nitn=nitn, MB=MB)[0]
         
     if T_sm > LQCD:
-        result_lq = rate_int_lq.compute(T_sm, T_ds, n_strat=n_strat, neval=neval, nitn=nitn, MB)[0]
+        result_lq = rate_int_lq.compute(T_sm, T_ds, n_strat=n_strat, neval=neval, nitn=nitn, MB=MB)[0]
         
         if T_sm > 5*m_s:
             result_strange = result_lq
         else:
-            result_strange = rate_int_strange.compute(T_sm, T_ds, n_strat=n_strat, neval=neval, nitn=nitn, MB)[0]
+            result_strange = rate_int_strange.compute(T_sm, T_ds, n_strat=n_strat, neval=neval, nitn=nitn, MB=MB)[0]
             
         if T_sm > 5*m_c:
             result_charm = result_lq
         else:
-            result_charm = rate_int_charm.compute(T_sm, T_ds, n_strat=n_strat, neval=neval, nitn=nitn, MB)[0]
+            result_charm = rate_int_charm.compute(T_sm, T_ds, n_strat=n_strat, neval=neval, nitn=nitn, MB=MB)[0]
         
         if T_sm > m_b/30.0:
             if T_sm > 5*m_b:
                 result_bot = result_lq
             else:
-                result_bot = rate_int_bot.compute(T_sm, T_ds, n_strat=n_strat, neval=neval, nitn=nitn, MB)[0]
+                result_bot = rate_int_bot.compute(T_sm, T_ds, n_strat=n_strat, neval=neval, nitn=nitn, MB=MB)[0]
             
         if T_sm > m_t/30.0:
             if T_sm > 5*m_t:
                 result_top = result_lq
             else:
-                result_top = rate_int_top.compute(T_sm, T_ds, n_strat=n_strat, neval=neval, nitn=nitn, MB)[0]
+                result_top = rate_int_top.compute(T_sm, T_ds, n_strat=n_strat, neval=neval, nitn=nitn, MB=MB)[0]
         
             
     #compute prefactors, dont include millicharge since all processes rescale with the millicharge
