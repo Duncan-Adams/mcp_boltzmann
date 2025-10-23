@@ -165,8 +165,19 @@ class ElasticCollisionIntegral:
         p0 = min(T_a, T_b)*(z_p0/(1-z_p0))
         
         J = min(T_a, T_b)**2*(1/(1-z_p))**2*(1/(1-z_p0))**2
+        
+        res = J*self.integrand_p0_MB(p0, T_a, T_b)*self.integrand_p_MB(p, p0, T_a, T_b)
+        
+        #integrand p0_MB can be inf, but in that case integrand_p_MB should be exactly zero
+        #we regulate this numerically by setting points where this happens in res to zero
+        sel = np.where(
+            (np.isnan(res))
+          & (self.integrand_p_MB(p, p0, T_a, T_b) == 0.)
+          )
+          
+        res[sel] = 0.
 
-        return J*self.integrand_p0_MB(p0, T_a, T_b)*self.integrand_p_MB(p, p0, T_a, T_b)
+        return res
 
     def vegas_integrand_helper_QS(self, T_a, T_b, z):
         z_p, z_p0 = np.transpose(z)

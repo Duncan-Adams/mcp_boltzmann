@@ -46,12 +46,16 @@ def save_results(task_result):
     outdir = task['outdir']
     do_plots = task['do_plots']
     
-    result_dir = os.path.join(outdir, f'mde_{m_de}/mdp_{m_dp}/Q_{Q:.3e}/')
+    result_dir = os.path.join(outdir, f'mde_{m_de}/mdp_{m_dp}/')
+    plot_dir = os.path.join(outdir, f'mde_{m_de}/mdp_{m_dp}/Q_{Q:.3e}/')
     
     if (not os.path.exists(result_dir)):
         os.makedirs(result_dir, exist_ok=True)
+        
+    if (not os.path.exists(result_dir)) and do_plots:
+        os.makedirs(plot_dir, exist_ok=True)
     
-    Boltz, sol_sm, sol_bsm = result
+    Boltz, sol_sm, sol_bsm, wall_time = result
     
     time_sm = sol_sm[0]
     T_gam_sm = sol_sm[1]
@@ -70,7 +74,7 @@ def save_results(task_result):
     
     DNeff_dso = Boltz.Delta_Neff_ds_only(T_gam_bsm[-1], T_dark_bsm[-1])
     
-    with open(os.path.join(result_dir, 'result.txt'), 'w') as out_txt:
+    with open(os.path.join(result_dir, f'result_Q_{Q:.3e}.txt'), 'w') as out_txt:
         print(f'{m_de=}', file=out_txt)
         print(f'{m_dp=}', file=out_txt)
         print(f'{Q=}', file=out_txt)
@@ -82,9 +86,11 @@ def save_results(task_result):
         print(f'{T_nu_bsm[-1]/T_gam_bsm[-1]=}', file=out_txt)
         print(f'{T_dark_bsm[-1]/T_gam_bsm[-1]=}', file=out_txt)
         print(f'{T_gam_sm[-1]/T_gam_bsm[-1]=}', file=out_txt)
+        print()
+        print(f'wall time: {wall_time} seconds', file=out_txt)
         
     np.savez_compressed(
-        os.path.join(result_dir, 'result.npz'),
+        os.path.join(result_dir, f'result_Q_{Q:.3e}.npz'),
         m_de = m_de,
         m_dp = m_dp,
         Q = Q,
@@ -103,7 +109,7 @@ def save_results(task_result):
         plt.xlabel(r'Time [MeV$^{-1}$]')
         plt.ylabel(r'Temperature [MeV]')
         plt.legend()
-        plt.savefig(os.path.join(result_dir, 'temp_sm.png'))
+        plt.savefig(os.path.join(plot_dir, 'temp_sm.png'))
         plt.cla()
         ################################################################################################################
         plt.plot(time_sm, T_gam_sm, label=r'T$_\gamma$ SM')
@@ -114,7 +120,7 @@ def save_results(task_result):
         plt.xlabel(r'Time [MeV$^{-1}$]')
         plt.ylabel(r'Temperature [MeV]')
         plt.legend()
-        plt.savefig(os.path.join(result_dir, 'tgam_compare.png'))
+        plt.savefig(os.path.join(plot_dir, 'tgam_compare.png'))
         plt.cla()
         ################################################################################################################        
         plt.plot(time_bsm, T_gam_bsm, label=r'T$_\gamma$')
@@ -130,7 +136,7 @@ def save_results(task_result):
         plt.ylabel(r'Temperature [MeV]')
         
         plt.legend()
-        plt.savefig(os.path.join(result_dir, 'temp_bsm.png'))
+        plt.savefig(os.path.join(plot_dir, 'temp_bsm.png'))
         plt.cla()
         ################################################################################################################
         plt.plot(time_bsm, T_nu_bsm/T_gam_bsm, label=r'T$_\nu$/T$_\gamma$')
@@ -142,7 +148,7 @@ def save_results(task_result):
         plt.title('Temperature Ratio')
         plt.legend()
         
-        plt.savefig(os.path.join(result_dir, 'temp_ratio_time.png'))
+        plt.savefig(os.path.join(plot_dir, 'temp_ratio_time.png'))
         plt.cla()
         ################################################################################################################
         plt.plot(T_gam_bsm, T_nu_bsm/T_gam_bsm, label=r'T$_\nu$/T$_\gamma$')
@@ -156,7 +162,7 @@ def save_results(task_result):
         plt.gca().invert_xaxis()
         plt.legend()
         
-        plt.savefig(os.path.join(result_dir, 'temp_ratio.png'))
+        plt.savefig(os.path.join(plot_dir, 'temp_ratio.png'))
         plt.cla()
         ################################################################################################################
         plt.plot(T_gam_bsm, Boltz.colterms_EM_DS[0](T_gam_bsm, T_dark_bsm, Q)/T_gam_bsm**6, label='annihilation')
@@ -172,12 +178,13 @@ def save_results(task_result):
         plt.title(r'C/$T^6_\gamma$ [MeV$^{-1}$]')
         plt.legend()
         
-        plt.savefig(os.path.join(result_dir, 'rates.png'))
+        plt.savefig(os.path.join(plot_dir, 'rates.png'))
         plt.cla()
         
     return 
         
 def compute_neff(m_de, m_dp, Q):
+    time_start = time.time()
     MeV = 1
     GeV = 1e3
     
@@ -229,7 +236,9 @@ def compute_neff(m_de, m_dp, Q):
     sol_sm = Boltz.solve_boltzmann_eq_SM(T_gamma_0, T_nu_0)
     sol_bsm = Boltz.solve_boltzmann_eq(T_gamma_0, T_nu_0, T_DS_0)
     
-    return Boltz, sol_sm, sol_bsm
+    time_end = time.time()
+    
+    return Boltz, sol_sm, sol_bsm, (time_end - time_start)
 
 if __name__ == "__main__":
     __spec__ = None
