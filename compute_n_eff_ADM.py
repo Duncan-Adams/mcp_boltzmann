@@ -52,7 +52,7 @@ def save_results(task_result):
     if (not os.path.exists(result_dir)):
         os.makedirs(result_dir, exist_ok=True)
         
-    if (not os.path.exists(result_dir)) and do_plots:
+    if (not os.path.exists(plot_dir)) and do_plots:
         os.makedirs(plot_dir, exist_ok=True)
     
     Boltz, sol_sm, sol_bsm, wall_time = result
@@ -86,7 +86,7 @@ def save_results(task_result):
         print(f'{T_nu_bsm[-1]/T_gam_bsm[-1]=}', file=out_txt)
         print(f'{T_dark_bsm[-1]/T_gam_bsm[-1]=}', file=out_txt)
         print(f'{T_gam_sm[-1]/T_gam_bsm[-1]=}', file=out_txt)
-        print()
+        print('', file=out_txt)
         print(f'wall time: {wall_time} seconds', file=out_txt)
         
     np.savez_compressed(
