@@ -244,8 +244,8 @@ if __name__ == "__main__":
     __spec__ = None
 
     parser = argparse.ArgumentParser(
-                    prog='compute_coulomb.py',
-                    description='tabulate coulomb scattering rates for MCPs')
+                    prog='compute_n_eff_ADM.py',
+                    description='calculate Neff from mcp freeze-in/freeze-out in adm models')
 
     parser.add_argument('m_de', action='store', type=float, help='mass of dark electron in MeV')
     parser.add_argument('m_dp', action='store', type=float, help='mass of dark proton in MeV')
