@@ -189,15 +189,15 @@ def compute_neff(m_de, m_dp, Q):
     GeV = 1e3
     
     _CF_ff_de_de_I = ann.load_ann_rate(
-        f'./output/rates/annihilation/mcp_annihilation_rate_m_{m_de}_Q_1.npz'
+        f'./output/rates/annihilation/scan/mcp_annihilation_rate_m_{m_de}_Q_1.npz'
     )
     
     _CF_ff_dp_dp_I = ann.load_ann_rate(
-        f'./output/rates/annihilation/mcp_annihilation_rate_m_{m_dp}_Q_1.npz'
+        f'./output/rates/annihilation/scan/mcp_annihilation_rate_m_{m_dp}_Q_1.npz'
     )
         
-    mcp_coulomb_rate_de = elscat.load_tabulated_rate(f'./output/rates/coulomb/cluster/mcp_coulomb_rate_m_{m_de}_Q_1.npz')
-    mcp_coulomb_rate_dp = elscat.load_tabulated_rate(f'./output/rates/coulomb/cluster/mcp_coulomb_rate_m_{m_dp}_Q_1.npz')
+    mcp_coulomb_rate_de = elscat.load_tabulated_rate(f'./output/rates/coulomb/cluster/scan/mcp_coulomb_rate_m_{m_de}_Q_1.npz')
+    mcp_coulomb_rate_dp = elscat.load_tabulated_rate(f'./output/rates/coulomb/cluster/scan/mcp_coulomb_rate_m_{m_dp}_Q_1.npz')
     
     def CF_ann(T, Q):
         return Q**2*(_CF_ff_de_de_I(T) + _CF_ff_dp_dp_I(T))
