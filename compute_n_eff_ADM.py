@@ -265,7 +265,7 @@ if __name__ == "__main__":
     if not os.path.exists(args.outdir):
         os.makedirs(args.outdir, exist_ok=True)
 
-    pool = schwimmbad.choose_pool(mpi=args.mpi, processes=args.n_cores)
+    pool = schwimmbad.choose_pool(mpi=args.mpi, processes=args.n_cores, use_dill=True)
     
     # read in list of models
     Q_range = np.geomspace(args.Q_min, args.Q_max, args.num_Q)
