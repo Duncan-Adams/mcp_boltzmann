@@ -182,7 +182,7 @@ if __name__ == "__main__":
     if not os.path.exists(args.outdir):
         os.makedirs(args.outdir, exist_ok=True)
         
-    tasks = np.genfromtxt(args.mass_list, delimiter=',', skip_header=2)
+    tasks = np.genfromtxt(args.mass_list, delimiter=',', skip_header=0)
         
     fun_loop = partial(
         compute_annihilation_rate, 
