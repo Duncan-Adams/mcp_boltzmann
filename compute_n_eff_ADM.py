@@ -24,7 +24,14 @@ def worker(task):
     Q = task['Q']
     outdir = task['outdir']
     do_plots = task['do_plots']
+    overwrite = task['overwrite']
     
+    result_dir = os.path.join(outdir, f'mde_{m_de}/mdp_{m_dp}/')
+    
+    if (overwrite is False) and os.path.exists(os.path.join(result_dir,f'result_Q_{Q:.3e}.npz')):
+        print(f'path: {os.path.join(result_dir,"result_Q_{Q:.3e}.npz}")} exists and overwrite is false... skipping')
+        return None 
+        
     try:
         res = compute_neff(m_de, m_dp, Q)
         
@@ -253,6 +260,7 @@ if __name__ == "__main__":
     parser.add_argument('Q_max', action='store', type=float, help='maximum value of millicharge to scan over')
     parser.add_argument('num_Q', action='store', type=int, help='number of geometrically spaced millicharges in scan')
     parser.add_argument('--save_plots', dest='do_plots', action='store_true')
+    parser.add_argument('--overwrite', dest='overwrite', action='store_true')
     parser.add_argument('--outdir', dest='outdir', action='store', default='./', type=str)
 
     group = parser.add_mutually_exclusive_group()
@@ -277,7 +285,8 @@ if __name__ == "__main__":
             'm_dp': args.m_dp,
             'Q': Q,
             'outdir': args.outdir,
-            'do_plots': args.do_plots
+            'do_plots': args.do_plots,
+            'overwrite': args.overwrite
         }
         tasks[i] = td
         
