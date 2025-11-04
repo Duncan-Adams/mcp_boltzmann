@@ -27,9 +27,10 @@ def worker(task):
     overwrite = task['overwrite']
     
     result_dir = os.path.join(outdir, f'mde_{m_de}/mdp_{m_dp}/')
+    result_fname = f'result_Q_{Q:.3e}.npz'
     
-    if (overwrite is False) and os.path.exists(os.path.join(result_dir,f'result_Q_{Q:.3e}.npz')):
-        print(f'path: {os.path.join(result_dir,"result_Q_{Q:.3e}.npz}")} exists and overwrite is false... skipping')
+    if (overwrite is False) and os.path.exists(os.path.join(result_dir, result_fname)):
+        print(f'path: {result_fname} exists and overwrite is false... skipping')
         return None 
         
     try:
@@ -253,12 +254,19 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(
                     prog='compute_n_eff_ADM.py',
                     description='calculate Neff from mcp freeze-in/freeze-out in adm models')
+                    
+    subparsers = parser.add_subparsers(dest="subparser")
+    
+    parser_compute = subparsers.add_parser('compute', help='Compute N_eff at a single point in the (m_de, m_dp, Q) parameter space')
+    parser_compute.add_argument('m_de', action='store', type=float, help='mass of dark electron in MeV')
+    parser_compute.add_argument('m_dp', action='store', type=float, help='mass of dark proton in MeV')
+    parser_compute.add_argument('Q', action='store', type=float, help='millicharge of dark fermions')
 
-    parser.add_argument('m_de', action='store', type=float, help='mass of dark electron in MeV')
-    parser.add_argument('m_dp', action='store', type=float, help='mass of dark proton in MeV')
-    parser.add_argument('Q_min', action='store', type=float, help='minimum value of millicharge to scan over')
-    parser.add_argument('Q_max', action='store', type=float, help='maximum value of millicharge to scan over')
-    parser.add_argument('num_Q', action='store', type=int, help='number of geometrically spaced millicharges in scan')
+    parser_scan = subparsers.add_parser('scan', help='Compute N_eff values for points defined in an input file (see notebooks/adm_scan_list.ipynb)')
+    parser_scan.add_argument('scan_list', action='store', type=str, help='filename of text file with scan parameters')
+    parser_scan.add_argument('i_start', action='store', type=int, help='index into scan params list to start at')
+    parser_scan.add_argument('i_end', action='store', type=int, help='index into scan params list to end at')
+
     parser.add_argument('--save_plots', dest='do_plots', action='store_true')
     parser.add_argument('--overwrite', dest='overwrite', action='store_true')
     parser.add_argument('--outdir', dest='outdir', action='store', default='./', type=str)
@@ -269,26 +277,39 @@ if __name__ == "__main__":
     group.add_argument("--mpi", dest="mpi", default=False,
                        action="store_true", help="Run with MPI.")
     args = parser.parse_args()
+    
 
     if not os.path.exists(args.outdir):
         os.makedirs(args.outdir, exist_ok=True)
 
     pool = schwimmbad.choose_pool(mpi=args.mpi, processes=args.n_cores, use_dill=True)
     
-    # read in list of models
-    Q_range = np.geomspace(args.Q_min, args.Q_max, args.num_Q)
-    tasks = [dict()]*len(Q_range)
-    
-    for (i, Q) in enumerate(Q_range):
+    if args.subparser == 'compute':
         td = {
             'm_de': args.m_de,
             'm_dp': args.m_dp,
-            'Q': Q,
+            'Q': args.Q,
             'outdir': args.outdir,
             'do_plots': args.do_plots,
             'overwrite': args.overwrite
         }
-        tasks[i] = td
+        tasks = [td]
+    
+    if args.subparser == 'scan':
+        # read file of model points
+        joblist = np.loadtxt(args.scan_list, delimiter=',')[args.i_start:args.i_end]
+        tasks = [dict()]*len(joblist)
+        
+        for (i, job) in enumerate(joblist):
+            td = {
+                'm_de': job[0],
+                'm_dp': job[1],
+                'Q': job[2],
+                'outdir': args.outdir,
+                'do_plots': args.do_plots,
+                'overwrite': args.overwrite
+            }
+            tasks[i] = td
         
     
     time_start = time.time()
