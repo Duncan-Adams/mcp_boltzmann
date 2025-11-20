@@ -38,6 +38,10 @@ def worker(task):
         
     except Exception as e:
         print(traceback.format_exc())
+        with open(os.path.join(result_dir, f'FAILED_Q_{Q:.3e}.txt'), 'w') as out_txt:
+            print(f'{m_de=}', file=out_txt)
+            print(f'{m_dp=}', file=out_txt)
+            print(f'{Q=}', file=out_txt)
         return None
         
     return (task, res)
@@ -281,8 +285,14 @@ if __name__ == "__main__":
 
     if not os.path.exists(args.outdir):
         os.makedirs(args.outdir, exist_ok=True)
+        
+    pool_kwargs = dict()
+    if args.mpi is True:
+        pool_kwargs = {
+        'use_dill': True
+        }
 
-    pool = schwimmbad.choose_pool(mpi=args.mpi, processes=args.n_cores, use_dill=True)
+    pool = schwimmbad.choose_pool(mpi=args.mpi, processes=args.n_cores, **pool_kwargs)
     
     if args.subparser == 'compute':
         td = {
