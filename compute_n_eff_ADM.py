@@ -38,6 +38,7 @@ def worker(task):
         
     except Exception as e:
         print(traceback.format_exc())
+        os.makedirs(result_dir, exist_ok=True)
         with open(os.path.join(result_dir, f'FAILED_Q_{Q:.3e}.txt'), 'w') as out_txt:
             print(f'{m_de=}', file=out_txt)
             print(f'{m_dp=}', file=out_txt)
