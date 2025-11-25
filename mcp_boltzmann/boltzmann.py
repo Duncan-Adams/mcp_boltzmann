@@ -27,8 +27,8 @@ class MCPBoltzmann:
         self.Q = Q
         self.colterms_EM_NU = [] #collision terms between em sector and nuetrino sector
         self.colterms_EM_DS = [] #collision terms between em sector and dark sector
-        self.rtol = 1e-5
-        self.atol=1e-5
+        self.rtol = rtol
+        self.atol = atol
         
     def rho_EM(self, T_gam):
         return (np.pi**2/30)*gstar_E_EM(T_gam, T_nu_dec)*T_gam**4
@@ -413,8 +413,8 @@ class ADMBoltzmann(MCPBoltzmann):
         self.Q = Q
         self.colterms_EM_NU = [] #collision terms between em sector and nuetrino sector
         self.colterms_EM_DS = [] #collision terms between em sector and dark sector
-        self.rtol = 1e-5
-        self.atol=1e-5
+        self.rtol = rtol
+        self.atol = atol
         
     def rho_DS(self, T_ds):
         return rho_gam(T_ds) + rhoDM_FD(T_ds, np.zeros_like(T_ds), self.m_de) + rhoDM_FD(T_ds, np.zeros_like(T_ds), self.m_dp)
