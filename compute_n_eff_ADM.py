@@ -184,10 +184,23 @@ def save_results(task_result):
         plt.plot(T_gam_bsm, Boltz.colterms_EM_DS[3](T_gam_bsm, T_dark_bsm, Q)/T_gam_bsm**6, label='Z decay')
         plt.xscale('log')
         plt.yscale('log')
-        plt.ylim(1e-27, 1e-22)
+        
+        sum_rate = (
+            Boltz.colterms_EM_DS[0](T_gam_bsm, T_dark_bsm, Q)
+            +Boltz.colterms_EM_DS[1](T_gam_bsm, T_dark_bsm, Q)
+            +Boltz.colterms_EM_DS[2](T_gam_bsm, T_dark_bsm, Q)
+            +Boltz.colterms_EM_DS[3](T_gam_bsm, T_dark_bsm, Q)
+        )
+        
+        ymax = np.max(sum_rate/T_gam_bsm**6)
+        plt.ylim(1e-5*ymax, 20*ymax)
+        
+        plt.axvline(m_de, label='Dark Electron', linestyle='dashed', color='darkred')
+        plt.axvline(m_dp, label='Dark Proton', linestyle='dashed', color='darkblue')
+
         plt.gca().invert_xaxis()
         
-        plt.xlabel('Time [MeV$^{-1}$]')
+        plt.xlabel(r'T$_\gamma$ [MeV]')
         plt.title(r'C/$T^6_\gamma$ [MeV$^{-1}$]')
         plt.legend()
         
