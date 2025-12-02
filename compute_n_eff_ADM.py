@@ -125,14 +125,16 @@ def save_results(task_result):
         plt.savefig(os.path.join(plot_dir, 'temp_sm.png'))
         plt.cla()
         ################################################################################################################
-        plt.plot(time_sm, T_gam_sm, label=r'T$_\gamma$ SM')
-        plt.plot(time_bsm, T_gam_bsm, label=r'T$_\gamma$ BSM')
+        T_gam_SM_I = interp1d(time_sm, T_gam_sm)
+        T_gam_BSM_I = interp1d(time_bsm, T_gam_bsm)
+        
+        plt.plot(time_sm, T_gam_BSM_I(time_sm)/T_gam_SM_I(time_sm))
+        plt.ylim(1e-2, 2)
+        
         plt.yscale('log')
         plt.xscale('log')
-        
-        plt.xlabel(r'Time [MeV$^{-1}$]')
-        plt.ylabel(r'Temperature [MeV]')
-        plt.legend()
+        plt.xlabel('Time [MeV$^{-1}$]')
+
         plt.savefig(os.path.join(plot_dir, 'tgam_compare.png'))
         plt.cla()
         ################################################################################################################        
@@ -248,7 +250,7 @@ def compute_neff(m_de, m_dp, Q):
     def CF_Z_decay(T_sm, T_ds, Q):
         return plas.C_Z_decay(T_sm, T_ds, m_de, Q) + plas.C_Z_decay(T_sm, T_ds, m_dp, Q) 
         
-    Boltz = ADMBoltzmann(m_de, m_dp, Q, rtol=1e-7, atol=1e-7)
+    Boltz = ADMBoltzmann(m_de, m_dp, Q, rtol=1e-8, atol=1e-8)
     Boltz.add_colterm_EM_DS(CF_ann_sm_ds)
     Boltz.add_colterm_EM_DS(CF_scatt_sm_ds)
     Boltz.add_colterm_EM_DS(CF_plas)
