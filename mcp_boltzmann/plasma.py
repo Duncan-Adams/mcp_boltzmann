@@ -130,7 +130,7 @@ def C_B_decay(T_sm, T_ds, m_mcp, Q_mcp):
     arg_sqrt = np.nan_to_num((1 - 4*m_mcp**2/mB2))
     sq = np.sqrt(arg_sqrt*np.heaviside(arg_sqrt, 0))
     
-    return ((1/3)*alpha*Q_mcp**2/c2_theta_w**2)*(mB2 + 2*m_mcp**2)*(n_gam(T_sm) - n_gam(T_ds)) #I think its okay to use n_gam assuming massless distribtution since m_B ~ 0.1 T
+    return ((1/3)*alpha*Q_mcp**2/c2_theta_w**2)*(mB2 + 2*m_mcp**2)*sq*(n_gam(T_sm) - n_gam(T_ds)) #I think its okay to use n_gam assuming massless distribtution since m_B ~ 0.1 T
 
     
 
