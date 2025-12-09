@@ -29,6 +29,7 @@ m_c = 1270.0
 
 m_b = 4180
 m_t = 172.76*GeV
+m_W = 80.37*GeV
 
 q_u = 2/3
 q_d = -1/3
@@ -43,8 +44,14 @@ M_Z = 91188.0 #MeV
 def mgamma_integrand(z, x):
     return np.sqrt(z**2 - x**2)/(np.exp(z)+1)
 
+def mgamma_integrand_bose(z, x):
+    return np.sqrt(z**2 - x**2)/(np.exp(z)-1)
+
 def mgamma_int(x):
     return quad(mgamma_integrand, x, np.inf, args=(x), epsabs=1e-12, epsrel=1e-12)[0]
+    
+def mgamma_int_bose(x):
+    return quad(mgamma_integrand_bose, x, np.inf, args=(x), epsabs=1e-12, epsrel=1e-12)[0]
 
 @np.vectorize
 def m_gam_2(T_sm):
@@ -59,6 +66,8 @@ def m_gam_2(T_sm):
     x_c = m_c/T_sm
     x_b = m_b/T_sm
     x_t = m_t/T_sm
+    
+    x_w = m_W/T_sm
 
     #summing over spin states only gives a factor of 2, as the derivation of A.8 in 2206.13530 (which is really from a textbook) 
     #assumes that f_p is the sum of particle anti particle pairs
@@ -71,8 +80,10 @@ def m_gam_2(T_sm):
       + q_b**2*mgamma_int(x_b)
       + q_t**2*mgamma_int(x_t)
       )
+      
+    gb = 3*mgamma_int_bose(x_w)
 
-    return (4*alpha/np.pi)*T_sm**2*(qed + qcd*np.heaviside(T_sm - LQCD, 0))
+    return (4*alpha/np.pi)*T_sm**2*(qed + qcd*np.heaviside(T_sm - LQCD, 0) + gb)
 
 def m_B_2(T_sm):
     '''

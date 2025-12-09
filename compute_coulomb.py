@@ -69,7 +69,7 @@ def setup_coulomb_integrals(m_mcp, mgam):
         "rate_higgs": coulomb_higgs
         } 
     
-def compute_coulomb_rate(temps, m_mcp, n_strat, neval, nitn, MB=False):
+def compute_coulomb_rate(temps, m_mcp, n_strat, neval, nitn, MB=False, no_top=False):
     '''
     Compute coulomb scattering collision integral with sm fermions for an mcp of mass M at millicharge = 1.0
     
@@ -213,6 +213,9 @@ def compute_coulomb_rate(temps, m_mcp, n_strat, neval, nitn, MB=False):
     pref_higgs = 0.0
     pref_nu = 0.0
     
+    if no_top:
+        pref_top = 0.0
+    
     if electroweak:
         #need to sum over each weyl fermion now
         pref_e_l = Y_e_l**2/(2*c2_theta_w**2)
@@ -233,7 +236,7 @@ def compute_coulomb_rate(temps, m_mcp, n_strat, neval, nitn, MB=False):
         pref_u = 4*3*16*np.pi*e**4*(pref_u_l + pref_u_r)
         pref_d = 4*3*16*np.pi*e**4*(pref_d_l + pref_d_r)
         
-        pref_nu = 2*6*16*np.pi*e**4*pref_nu_l
+        pref_nu = 4*3*16*np.pi*e**4*pref_nu_l #it really is 4 here because this is summing over all combinations of particles/antiparticles
         
         pref_lq = (pref_u + pref_d)
         pref_charm = pref_u
@@ -399,6 +402,7 @@ if __name__ == "__main__":
     parser.add_argument('n_temps', action='store', type=int, help='number of temperatures in temperature grid')
     parser.add_argument('--forwards', action='store_true', help='compute forwards rate only')
     parser.add_argument('--maxwell_boltzmann', dest='MB', action='store_true', help='compute using MB distributions')
+    parser.add_argument('--no_top', dest='no_top', action='store_true', help='ignore top contributions below EWSB temp')
     parser.add_argument('--outdir', dest='outdir', action='store', default='./', type=str)
     parser.add_argument('--overwrite', dest='overwrite', action='store_true')
 
@@ -430,7 +434,8 @@ if __name__ == "__main__":
         n_strat=([3]+[3]), 
         neval=1e3, 
         nitn=10,
-        MB=args.MB
+        MB=args.MB,
+        no_top = args.no_top
     )
     
     if args.forwards is True:
