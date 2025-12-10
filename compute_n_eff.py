@@ -17,8 +17,6 @@ from mcp_boltzmann.boltzmann import MCPBoltzmann
 import matplotlib
 matplotlib.use('Agg')
 
-
-
 def worker(task):
     m_mcp = task['mass']
     Q = task['Q']

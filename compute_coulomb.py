@@ -243,7 +243,6 @@ def compute_coulomb_rate(temps, m_mcp, n_strat, neval, nitn, MB=False, no_top=Fa
         pref_strange = pref_d
         pref_top = pref_u
         pref_bot = pref_d
-        
     
     result_total = (
         pref_lept*(result_e + result_mu + result_tau) 
