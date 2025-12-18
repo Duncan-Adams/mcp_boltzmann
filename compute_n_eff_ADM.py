@@ -262,7 +262,7 @@ def compute_neff(m_de, m_dp, Q):
     T_DS_0 = Boltz.guess_initial_dark_temp(T_gamma_0)
     
     if (np.isclose(T_DS_0, T_gamma_0)):
-        T_DS_0 = 1e-1*T_DS_0
+        T_DS_0 = T_DS_0
     else:
         T_DS_0 = 1e-2*T_DS_0
     
