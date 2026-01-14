@@ -44,6 +44,9 @@ class MCPBoltzmann:
     
     def drho_neutrino_dT(self, T_nu):
         return 3*drho_nudT(T_nu, np.zeros_like(T_nu))
+        
+    def rho_photon(self, T_gam):
+        return rho_gam(T_gam)
     
     def rho_DS(self, T_ds):
         return rho_gam(T_ds) + rhoDM_FD(T_ds, np.zeros_like(T_ds), self.m_mcp)
@@ -396,10 +399,26 @@ class MCPBoltzmann:
         return T_dark_inital
         
     def N_eff(self, T_gam, T_nu, T_ds):
-        return (8/7)*(11/4)**(4/3)*((self.rho_neutrino(T_nu) + self.rho_DS(T_ds))/self.rho_EM(T_gam))
+        N_eff_nu_dec = (8/7)*(11/4)**(4/3)*((self.rho_EM(T_gam) + self.rho_neutrino(T_nu) + self.rho_DS(T_ds) - rho_gam(T_gam))/rho_gam(T_gam))
+        N_eff_no_nu_dec = (8/7)*(11/4)**(4/3)*((self.rho_EM(T_gam) + self.rho_DS(T_ds) - rho_gam(T_gam))/rho_gam(T_gam))
+        
+        return np.where(
+            T_gam < T_nu_dec,
+            N_eff_nu_dec,
+            N_eff_no_nu_dec
+        )
 
     def N_eff_SM(self, T_gam, T_nu):
-        return (8/7)*(11/4)**(4/3)*((self.rho_neutrino(T_nu)/self.rho_EM(T_gam)))
+        N_eff_nu_dec = (8/7)*(11/4)**(4/3)*((self.rho_EM(T_gam) + self.rho_neutrino(T_nu) - rho_gam(T_gam))/rho_gam(T_gam))
+        N_eff_no_nu_dec = (8/7)*(11/4)**(4/3)*((self.rho_EM(T_gam) - rho_gam(T_gam))/rho_gam(T_gam))
+        
+        return np.where(
+            T_gam < T_nu_dec,
+            N_eff_nu_dec,
+            N_eff_no_nu_dec
+        )
+        
+        
     #compute delta Neff only conisdering the temperature of the dark photons and photons
     def Delta_Neff_ds_only(self, T_gam, T_ds):
         return (8/7)*(11/4)**(4/3)*(self.rho_DS(T_ds)/self.rho_EM(T_gam))

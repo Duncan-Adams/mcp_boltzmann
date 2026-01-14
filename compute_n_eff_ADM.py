@@ -25,6 +25,7 @@ def worker(task):
     outdir = task['outdir']
     do_plots = task['do_plots']
     overwrite = task['overwrite']
+    not_thermalized = task['not_thermalized']
     
     result_dir = os.path.join(outdir, f'mde_{m_de}/mdp_{m_dp}/')
     result_fname = f'result_Q_{Q:.3e}.npz'
@@ -34,7 +35,7 @@ def worker(task):
         return None 
         
     try:
-        res = compute_neff(m_de, m_dp, Q)
+        res = compute_neff(m_de, m_dp, Q, not_thermalized)
         
     except Exception as e:
         print(traceback.format_exc())
@@ -43,6 +44,7 @@ def worker(task):
             print(f'{m_de=}', file=out_txt)
             print(f'{m_dp=}', file=out_txt)
             print(f'{Q=}', file=out_txt)
+            print(f'{not_thermalized=}', file=out_txt)
         return None
         
     return (task, res)
@@ -58,6 +60,7 @@ def save_results(task_result):
     Q = task['Q']
     outdir = task['outdir']
     do_plots = task['do_plots']
+    not_thermalized = task['not_thermalized']
     
     result_dir = os.path.join(outdir, f'mde_{m_de}/mdp_{m_dp}/')
     plot_dir = os.path.join(outdir, f'mde_{m_de}/mdp_{m_dp}/Q_{Q:.3e}/')
@@ -99,6 +102,7 @@ def save_results(task_result):
         print(f'{T_nu_bsm[-1]/T_gam_bsm[-1]=}', file=out_txt)
         print(f'{T_dark_bsm[-1]/T_gam_bsm[-1]=}', file=out_txt)
         print(f'{T_gam_sm[-1]/T_gam_bsm[-1]=}', file=out_txt)
+        print(f'{not_thermalized=}', file=out_txt)
         print('', file=out_txt)
         print(f'wall time: {wall_time} seconds', file=out_txt)
         
@@ -210,8 +214,24 @@ def save_results(task_result):
         plt.cla()
         
     return 
+    
+from scipy.interpolate import LinearNDInterpolator
+def load_tabulated_rate(path):
+    with np.load(path) as rate_file:
+        temp_grid = rate_file['temp_grid']
+        rate = rate_file['rate']
+
+        T_min = np.min(np.unique(temp_grid[:, 0]))
+        T_max = np.max(np.unique(temp_grid[:, 0]))
+        T_range = np.geomspace(T_min, T_max, 1000)
         
-def compute_neff(m_de, m_dp, Q):
+        
+
+        temp_grid = np.concatenate((temp_grid, np.array(list(zip(T_range, T_range)))))
+        rate = np.concatenate((rate, np.zeros(1000)))
+        return LinearNDInterpolator(temp_grid, rate, fill_value=0.0)
+        
+def compute_neff(m_de, m_dp, Q, not_thermalized = False):
     time_start = time.time()
     MeV = 1
     GeV = 1e3
@@ -224,8 +244,10 @@ def compute_neff(m_de, m_dp, Q):
         f'./output/rates/annihilation/scan/mcp_annihilation_rate_m_{m_dp}_Q_1.npz'
     )
         
-    mcp_coulomb_rate_de = elscat.load_tabulated_rate(f'./output/rates/coulomb/cluster/scan/highmass/notop/mcp_coulomb_rate_m_{m_de}_Q_1.npz')
-    mcp_coulomb_rate_dp = elscat.load_tabulated_rate(f'./output/rates/coulomb/cluster/scan/highmass/notop/mcp_coulomb_rate_m_{m_dp}_Q_1.npz')
+    # ~ mcp_coulomb_rate_de = elscat.load_tabulated_rate(f'./output/rates/coulomb/cluster/scan/mcp_coulomb_rate_m_{m_de}_Q_1.npz')
+    # ~ mcp_coulomb_rate_dp = elscat.load_tabulated_rate(f'./output/rates/coulomb/cluster/scan/mcp_coulomb_rate_m_{m_dp}_Q_1.npz')
+    mcp_coulomb_rate_de = load_tabulated_rate(f'./output/rates/coulomb/cluster/scan/mcp_coulomb_rate_m_{m_de}_Q_1.npz')
+    mcp_coulomb_rate_dp = load_tabulated_rate(f'./output/rates/coulomb/cluster/scan/mcp_coulomb_rate_m_{m_dp}_Q_1.npz')
     
     def CF_ann(T, Q):
         return Q**2*(_CF_ff_de_de_I(T) + _CF_ff_dp_dp_I(T))
@@ -262,10 +284,13 @@ def compute_neff(m_de, m_dp, Q):
     T_DS_0 = Boltz.guess_initial_dark_temp(T_gamma_0)
     
     if (np.isclose(T_DS_0, T_gamma_0)):
-        T_DS_0 = T_DS_0
+        T_DS_0 = T_gamma_0
     else:
-        T_DS_0 = 1e-2*T_DS_0
-    
+        T_DS_0 = 1e-2*T_gamma_0
+        
+    if not_thermalized is True:
+        T_DS_0 = 1e-2*T_gamma_0
+            
     sol_sm = Boltz.solve_boltzmann_eq_SM(T_gamma_0, T_nu_0)
     sol_bsm = Boltz.solve_boltzmann_eq(T_gamma_0, T_nu_0, T_DS_0)
     
@@ -295,6 +320,7 @@ if __name__ == "__main__":
     parser.add_argument('--save_plots', dest='do_plots', action='store_true')
     parser.add_argument('--overwrite', dest='overwrite', action='store_true')
     parser.add_argument('--outdir', dest='outdir', action='store', default='./', type=str)
+    parser.add_argument('--not_thermalized', dest='not_thermalized', action='store_true')
 
     group = parser.add_mutually_exclusive_group()
     group.add_argument("--ncores", dest="n_cores", default=1,
@@ -322,7 +348,8 @@ if __name__ == "__main__":
             'Q': args.Q,
             'outdir': args.outdir,
             'do_plots': args.do_plots,
-            'overwrite': args.overwrite
+            'overwrite': args.overwrite,
+            'not_thermalized': args.not_thermalized
         }
         tasks = [td]
     
@@ -338,7 +365,8 @@ if __name__ == "__main__":
                 'Q': job[2],
                 'outdir': args.outdir,
                 'do_plots': args.do_plots,
-                'overwrite': args.overwrite
+                'overwrite': args.overwrite,
+                'not_thermalized': args.not_thermalized
             }
             tasks[i] = td
         
