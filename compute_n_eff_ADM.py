@@ -223,12 +223,12 @@ def load_tabulated_rate(path):
 
         T_min = np.min(np.unique(temp_grid[:, 0]))
         T_max = np.max(np.unique(temp_grid[:, 0]))
-        T_range = np.geomspace(T_min, T_max, 1000)
+        T_range = np.geomspace(T_min, T_max, 5000)
         
         
 
         temp_grid = np.concatenate((temp_grid, np.array(list(zip(T_range, T_range)))))
-        rate = np.concatenate((rate, np.zeros(1000)))
+        rate = np.concatenate((rate, np.zeros(5000)))
         return LinearNDInterpolator(temp_grid, rate, fill_value=0.0)
         
 def compute_neff(m_de, m_dp, Q, not_thermalized = False):
