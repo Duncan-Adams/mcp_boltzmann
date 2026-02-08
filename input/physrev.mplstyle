@@ -6,7 +6,8 @@
 # Additional line style takes from
 # https://matplotlib.org/stable/gallery/lines_bars_and_markers/linestyles.html
 #
-axes.prop_cycle : (cycler('color', ['5d81b4', 'e09b24', '8eb031', 'eb6235', '8678b2', 'c46e1a', '5c9dc7', 'ffbf00', 'a5609c']) + cycler('ls', ['-', '--', '-.', (0, (1,0.85)), (0, (3, 1, 1, 1, 1, 1)), (0, (3, 1, 1, 1)), (0, (5, 1)), ':', (4, (10, 3))]))
+#axes.prop_cycle : (cycler('color', ['5d81b4', 'e09b24', '8eb031', 'eb6235', '8678b2', 'c46e1a', '5c9dc7', 'ffbf00', 'a5609c']) + cycler('ls', ['-', '--', '-.', (0, (1,0.85)), (0, (3, 1, 1, 1, 1, 1)), (0, (3, 1, 1, 1)), (0, (5, 1)), ':', (4, (10, 3))]))
+axes.prop_cycle : (cycler('color', ['5d81b4', 'e09b24', '8eb031', 'eb6235', '8678b2', 'c46e1a', '5c9dc7', 'ffbf00', 'a5609c']))
 
 # Use this if you want to use the default gnuplot palette (up to 8 colors)
 # The default palette can be found by typing 'show linetype' in gnuplot.
@@ -15,7 +16,7 @@ axes.prop_cycle : (cycler('color', ['5d81b4', 'e09b24', '8eb031', 'eb6235', '867
 
 ### Axes
 axes.titlesize : large
-axes.labelsize : 9
+axes.labelsize : 8
 axes.formatter.use_mathtext : True
 axes.linewidth : 0.5
 
@@ -28,7 +29,7 @@ grid.color : 'xkcd:light gray'
 lines.linewidth : 0.6
 lines.markersize : 10
 hatch.linewidth: 0.25
-patch.antialiased   : True
+patch.antialiased: True
 
 ### Ticks
 xtick.top: True

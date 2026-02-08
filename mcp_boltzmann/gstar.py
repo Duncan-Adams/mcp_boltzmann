@@ -234,6 +234,21 @@ def gstar_P_EM(T, T_nu_dec):
                     _g_P_EM_no_nu_I(T),
                     _g_P_EM_I(T)
     )
+    
+def gstar_s_EM(T, T_nu_dec):
+    '''
+    compute g* for the entropy of the electromagnetic plasma
+    
+    Parameters
+    ----------
+    T - temperature in MeV
+    
+    Returns
+    -------
+    float
+        g_star_s of T
+    '''
+    return (0.25)*(3*gstar_E_EM(T, T_nu_dec) + gstar_P_EM(T, T_nu_dec))
 
 
 def w_EM(T, T_nu_dec):
