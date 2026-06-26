@@ -18,7 +18,10 @@ MeV = 1
 GeV = 1e3*MeV
 keV = 1e-6 * GeV
 M_Planck = 1.22 * 1e19 * GeV
-m_e = 0.511 * keV #huh?
+m_e = 0.511 * MeV 
+M_W = 80369.2*MeV
+M_Z = 91.1880*GeV
+Z_WIDTH = 2.4955*GeV
 Ql = 1
 e = 0.302822
 
@@ -29,14 +32,64 @@ m_pi = 139.570 * MeV
 s2_theta_w = 0.22339 
 c2_theta_w = 1-s2_theta_w
 
+# Weak Force Shit
+
+def vector_axial_couplings(T3, q):
+    s2_theta_w = 0.22339 
+    cv = T3 - 2*q*s2_theta_w
+    ca = T3
+    return cv, ca
+    
+q_u = 2/3
+q_d = -1/3
+q_s = -1/3
+q_c = 2/3
+q_t = 2/3
+q_b = -1/3
+
+T3_u = +1/2
+T3_d = -1/2
+T3_c = +1/2
+T3_s = -1/2
+T3_t = +1/2
+T3_b = -1/2
+
+T3_e = -1/2
+T3_mu = -1/2
+T3_tau = -1/2
+
+T3_nu = 1/2
+q_nu = 0.0
+
+cv_e, ca_e = vector_axial_couplings(T3_e, -1)
+cv_mu, ca_mu = vector_axial_couplings(T3_mu, -1)
+cv_tau, ca_tau = vector_axial_couplings(T3_tau, -1)
+
+cv_u, ca_u = vector_axial_couplings(T3_u, q_u)
+cv_d, ca_d = vector_axial_couplings(T3_d, q_d)
+cv_c, ca_c = vector_axial_couplings(T3_c, q_c)
+cv_s, ca_s = vector_axial_couplings(T3_s, q_s)
+cv_t, ca_t = vector_axial_couplings(T3_t, q_t)
+cv_b, ca_b = vector_axial_couplings(T3_b, q_b)
+
+cv_nu, ca_nu = vector_axial_couplings(T3_nu, q_nu)
+
 
 #G function define in equation C.18 of Adshead, Ralengenkar, & Shelton (2206.13530)
 _base_path = os.path.dirname(os.path.abspath(__file__))
 _G_function_fermi_dat = np.load(os.path.join(_base_path, '../input/Gfun_fermion.npz'))
+_G_function_bose_dat = np.load(os.path.join(_base_path, '../input/Gfun_boson.npz'))
 
 _G_fermion_interp = interp1d(
     _G_function_fermi_dat['x_range'], 
     _G_function_fermi_dat['G_fermion_table'], 
+    bounds_error=False, 
+    fill_value=0
+)
+
+_G_boson_interp = interp1d(
+    _G_function_bose_dat['x_range'], 
+    _G_function_bose_dat['G_boson_table'], 
     bounds_error=False, 
     fill_value=0
 )
@@ -47,6 +100,10 @@ def load_ann_rate(path):
 
 def _G_fermi_small_x(x):
     return np.log(2)*(np.pi**2)/(6*x**2)
+    
+def _G_bose_small_x(x):
+    Aminus12 = 0.0516987883 #Glaisher-Kinkelin constant to the minus 12 power
+    return (np.pi**2)/(3*np.power(x, 2))*np.log(np.power(x, -2)*8*np.pi*np.e*Aminus12)
 
 def G_fermion(x):
     x = np.atleast_1d(x)
@@ -58,6 +115,20 @@ def G_fermion(x):
 
     res = _G_fermion_interp(x)
     res[mask_small_x] = _G_fermi_small_x(x[mask_small_x])
+    res[mask_large_x] = kn(2, x[mask_large_x])
+
+    return res
+    
+def G_boson(x):
+    x = np.atleast_1d(x)
+
+    mask_small_x = np.where(x < 1e-2)
+    mask_large_x = np.where(x > 20)
+
+    res = np.zeros(len(x))
+
+    res = _G_boson_interp(x)
+    res[mask_small_x] = _G_bose_small_x(x[mask_small_x])
     res[mask_large_x] = kn(2, x[mask_large_x])
 
     return res
@@ -73,7 +144,7 @@ def M2_llff(s,c2, m_mcp, m_l):#Note VR13 say they neglect the smaller of the 2 m
     return 4 * e**4 * Ql**2 * (1/s**2) * (s**2 * (1 + c2) + 4 * s * (m_mcp**2 + m_l**2)*(1-c2) + 16 * m_mcp**2 * m_l**2 * c2)
 
 #Cross-section:
-def sigma_llff(s, m_mcp, m_f, q_f=-1.0):
+def sigma_ff_xx_fermionic(s, m_mcp, m_f, q_f=-1.0):
     #Kinematics
     Ei = np.sqrt(s)/2
     Ef = Ei
@@ -81,10 +152,10 @@ def sigma_llff(s, m_mcp, m_f, q_f=-1.0):
     pf = np.sqrt(Ef**2 - m_mcp**2)
     return 4 * e**4 * q_f**2 * (2 * np.pi) / ((8 * np.pi)**2 ) * (1/s) * (pf/pi) * (8/3 + (32 * m_mcp**2 * m_f**2) / (3 * s**2) + (16 *(m_mcp**2 + m_f**2)) / (3 * s))
 
+#TODO: change notation. f in the function name is refering to a fermionic mcp and l a lepton. But l can be a quark. And m_f is actually the mass of l. its fucked
 # includes contribution from Z boson mediated annihilation, with the on shell Z piece subtracted off  see eq A.3 of 2206.13530
-def sigma_llff_Z_boson(s, m_mcp, m_f, q_f, cv, ca):
+def sigma_ff_xx_fermionic_Z_boson(s, m_mcp, m_f, q_f, cv, ca):
     #Kinematics
-    M_z = 91.1880*1e3
     Ei = np.sqrt(s)/2
     Ef = Ei
     pi = np.sqrt(Ei**2 - m_f**2)
@@ -92,11 +163,44 @@ def sigma_llff_Z_boson(s, m_mcp, m_f, q_f, cv, ca):
     
     prefactor = 8 * e**4 * (2 * np.pi) / ((8 * np.pi)**2 )
     photon_med = q_f**2*(4/3)*(2*m_mcp**2 + s)*(2*m_f**2 + s)
-    Z_med = -np.heaviside(s - M_z**2, 0)*(s + 2*m_mcp**2)*m_f**2*(cv**2 + 3*ca**2)/(2*c2_theta_w**2)
+    Z_med = -np.heaviside(s - M_Z**2, 0)*(s + 2*m_mcp**2)*m_f**2*(cv**2 + 3*ca**2)/(2*c2_theta_w**2)
     #I think only the second term in here is actually interference but w/e
-    interference = np.heaviside(s - M_z**2, 0)*(4/3)*(2*m_mcp**2 + s)*(2*m_f**2 + s)*( (cv**2 + ca**2)/(4*c2_theta_w) - cv*q_f/c2_theta_w ) 
+    interference = np.heaviside(s - M_Z**2, 0)*(4/3)*(2*m_mcp**2 + s)*(2*m_f**2 + s)*( (cv**2 + ca**2)/(4*c2_theta_w) - cv*q_f/c2_theta_w ) 
     
     return prefactor * (1/s**3) * (pf/pi) * (photon_med + Z_med + interference)
+    
+def sigma_ff_xx_bosonic_Z_boson(s, m_mcp, m_f, q_f, cv, ca):
+    #Kinematics
+    Ei = np.sqrt(s)/2
+    Ef = Ei
+    pi = np.sqrt(Ei**2 - m_f**2)
+    pf = np.sqrt(Ef**2 - m_mcp**2)
+    
+    prefactor = 2 * e**4 * (2 * np.pi) / ((8 * np.pi)**2 )
+    photon_med = q_f**2*(4/3)*(s - 4*m_mcp**2)*(2*m_f**2 + s)
+    Z_med = -np.heaviside(s - M_Z**2, 0)*(s - 4*m_mcp**2)*m_f**2*(cv**2 + 3*ca**2)/(2*c2_theta_w**2)
+    #I think only the second term in here is actually interference but w/e
+    interference = np.heaviside(s - M_Z*2, 0)*(4/3)*(s - 4*m_mcp**2)*(2*m_f**2 + s)*( (cv**2 + ca**2)/(4*c2_theta_w) - cv*q_f/c2_theta_w ) 
+    
+    return prefactor * (1/s**3) * (pf/pi) * (photon_med + Z_med + interference)
+
+#W boson annihilation to dirac fermion MCPS. SHould we write this as the off-shell cross section?
+def sigma_WW_xx_fermionic(s, m_mcp)
+    pref = (1/3)*e**4
+    
+    fac1 = (1 - 4*M_W**2/s)*(1+2*m_mcp**2/s)*(M_Z/M_W)**4
+    fac2 = (s**2 + 20*s*M_W**2 + 12*M_W**4)/((s-M_Z)**2 + M_Z**2*Z_WIDTH**2)
+    
+    return pref*fac1*fac2
+    
+def sigma_WW_xx_bosonic(s, m_mcp)
+    pref = (1/12)*e**4
+    
+    fac1 = (1 - 4*M_W**2/s)*(1-4*m_mcp**2/s)*(M_Z/M_W)**4
+    fac2 = (s**2 + 20*s*M_W**2 + 12*M_W**4)/((s-M_Z)**2 + M_Z**2*Z_WIDTH**2)
+    
+    return pref*fac1*fac2
+
 
 #form factor for pion
 def F_pi(s):
@@ -124,16 +228,19 @@ def I_integrand(lns,sigma_func, m_f, T):#log-space
     z = np.sqrt(s)/T
     return s * sigma_func(s) * (s - 4 * m_f**2) * dlns * np.where(z<100,kn(2,z),kn2_asymptotic(z))
     
+# for fermions in the initial state. Ignoring spin-statistics for the final state
 def I_integrand_fermi(lns, sigma_func, m_f, T):#log-space
     s=np.exp(lns)
     dlns = s
     z = np.sqrt(s)/T
     return s * sigma_func(s) * (s - 4 * m_f**2) * G_fermion(z)*dlns
-
-#Annihilation collision term integral
-g1 = 2
-g2 = 2
-#dont use these because the cross sections are already spin-summed
+    
+# for bosonsin the initial state. Ignoring spin-statistics for the final state
+def I_integrand_bose(lns, sigma_func, m_f, T):#log-space
+    s=np.exp(lns)
+    dlns = s
+    z = np.sqrt(s)/T
+    return s * sigma_func(s) * (s - 4 * m_f**2) * G_boson(z)*dlns
 
 def Ix(sigma_func, m_mcp, m_f, T):
     prefactor = T /(2**5 * np.pi**4) 
@@ -166,6 +273,26 @@ def Ix_fermi(sigma_func, m_mcp, m_f, T):
     
     integral = quad(
         I_integrand_fermi,
+        lns_min,
+        lns_max,
+        args=(sigma_func, m_f, T),
+        epsabs=0, #huh?
+        limit=200
+    )
+    
+    return prefactor * integral[0]
+    
+def Ix_bose(sigma_func, m_mcp, m_f, T):
+    prefactor = T /(32 * np.pi**4)
+    #At high temperature, the upper bound should be past the peak which is around 10 T^2. 
+    #At low temperature, this estimate is actually lower than 4m^2, so we need to explicitly go a bit above 4m^2. The peak is very narrow and close to 4m^2 in this regime. 
+    # ~ lns_min = np.log(4*m_f**2) #should this be log(max(4m_f^2, 4m_l^2))?
+    mass_thresh = max(4*m_mcp**2, 4*m_f**2)
+    lns_min = np.log(mass_thresh)
+    lns_max = max(np.log(T**2)+10,np.log(mass_thresh)+1)
+    
+    integral = quad(
+        I_integrand_bose,
         lns_min,
         lns_max,
         args=(sigma_func, m_f, T),

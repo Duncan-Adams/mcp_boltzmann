@@ -423,8 +423,6 @@ class MCPBoltzmann:
     def Delta_Neff_ds_only(self, T_gam, T_ds):
         return (8/7)*(11/4)**(4/3)*(self.rho_DS(T_ds)/self.rho_EM(T_gam))
         
-
-
 class ADMBoltzmann(MCPBoltzmann):
     def __init__(self, m_de, m_dp, Q, rtol=1e-5, atol=1e-5):
         self.m_de = m_de
@@ -443,3 +441,42 @@ class ADMBoltzmann(MCPBoltzmann):
     
     def drho_DS_dT(self, T_ds):
         return drho_gamdT(T_ds) + drhoDM_dT_FD(T_ds, np.zeros_like(T_ds), self.m_de) + drhoDM_dT_FD(T_ds, np.zeros_like(T_ds), self.m_dp)
+
+#this class solves thermal histories for nuetral dark matter with EM form factors that are part of dark sectors e.g. magnetic dipole moment or anapole momemnts 
+#THese theories typically have a scalar and fermionic millicharged particle with a massless dark photon
+class EMMDMBoltzmann(MCPBoltzmann):
+        def __init__(self, m_chi, M_s, M_f, Q, g_chi = 2, rtol=1e-5, atol=1e-5):
+            self.m_chi = m_chi # mass of (majorana) fermionic dm particle
+            self.g_chi = g_chi #2 for majorana, 4 for dirac fermion
+            self.M_s = M_s # mass of scalar millicharged particle
+            self.M_f = M_f # mass of fermionic millicharged particle
+            self.Q = Q
+            self.colterms_EM_NU = [] #collision terms between em sector and nuetrino sector
+            self.colterms_EM_DS = [] #collision terms between em sector and dark sector
+            self.rtol = rtol
+            self.atol = atol
+            
+        def rho_DS(self, T_ds):
+            return (
+                rho_gam(T_ds) 
+              + rhoDM_FD(T_ds, np.zeros_like(T_ds), self.M_f) 
+              + (self.g_chi/4)*rhoDM_FD(T_ds, np.zeros_like(T_ds), self.m_chi) 
+              + rhoDM_BE(T_ds, np.zeros_like(T_ds), self.M_s)
+            )
+    
+        def p_DS(self, T_ds):
+            return (
+                (1/3)*rho_gam(T_ds) 
+              + p_DM_FD(T_ds, np.zeros_like(T_ds), self.M_f) 
+              + (self.g_chi/4)*p_DM_FD(T_ds, np.zeros_like(T_ds), self.m_chi)
+              + p_DM_BE(T_ds, np.zeros_like(T_ds), self.M_s)
+            )
+            
+        def drho_DS_dT(self, T_ds):
+            return (
+                drho_gamdT(T_ds) 
+              + drhoDM_dT_FD(T_ds, np.zeros_like(T_ds), self.M_f)
+              + (self.g_chi/4)*drhoDM_dT_FD(T_ds, np.zeros_like(T_ds), self.m_chi)
+              + drhoDM_dT_BE(T_ds, np.zeros_like(T_ds), self.M_s)
+            )
+    
