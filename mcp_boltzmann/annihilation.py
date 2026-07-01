@@ -180,26 +180,46 @@ def sigma_ff_xx_bosonic_Z_boson(s, m_mcp, m_f, q_f, cv, ca):
     photon_med = q_f**2*(4/3)*(s - 4*m_mcp**2)*(2*m_f**2 + s)
     Z_med = -np.heaviside(s - M_Z**2, 0)*(s - 4*m_mcp**2)*m_f**2*(cv**2 + 3*ca**2)/(2*c2_theta_w**2)
     #I think only the second term in here is actually interference but w/e
-    interference = np.heaviside(s - M_Z*2, 0)*(4/3)*(s - 4*m_mcp**2)*(2*m_f**2 + s)*( (cv**2 + ca**2)/(4*c2_theta_w) - cv*q_f/c2_theta_w ) 
+    interference = np.heaviside(s - M_Z**2, 0)*(4/3)*(s - 4*m_mcp**2)*(2*m_f**2 + s)*( (cv**2 + ca**2)/(4*c2_theta_w) - cv*q_f/c2_theta_w ) 
     
     return prefactor * (1/s**3) * (pf/pi) * (photon_med + Z_med + interference)
 
-#W boson annihilation to dirac fermion MCPS. SHould we write this as the off-shell cross section?
-def sigma_WW_xx_fermionic(s, m_mcp)
-    pref = (1/3)*e**4
+#W boson annihilation to dirac fermion MCPS with the on-shell piece subtracted
+def sigma_WW_xx_fermionic(s, m_mcp):
+    coupling = (1/3)*e**4
+    
+    #Kinematics
+    Ei = np.sqrt(s)/2
+    Ef = Ei
+    pi = np.sqrt(Ei**2 - M_W**2)
+    pf = np.sqrt(Ef**2 - m_mcp**2)
+    
+    kin = 4*np.pi*(pf/pi)/(64*np.pi**2*s)
     
     fac1 = (1 - 4*M_W**2/s)*(1+2*m_mcp**2/s)*(M_Z/M_W)**4
-    fac2 = (s**2 + 20*s*M_W**2 + 12*M_W**4)/((s-M_Z)**2 + M_Z**2*Z_WIDTH**2)
+    fac2 = (1 + 20*M_W**2/s + 12*M_W**4/s**2)
     
-    return pref*fac1*fac2
+    amp = coupling*fac1*fac2*np.heaviside(s - M_Z**2, 0) #spin averaged amplitude
     
-def sigma_WW_xx_bosonic(s, m_mcp)
-    pref = (1/12)*e**4
+    return kin*amp
+    
+def sigma_WW_xx_bosonic(s, m_mcp):
+    coupling = (1/12)*e**4
+    
+    #Kinematics
+    Ei = np.sqrt(s)/2
+    Ef = Ei
+    pi = np.sqrt(Ei**2 - M_W**2)
+    pf = np.sqrt(Ef**2 - m_mcp**2)
+    
+    kin = 4*np.pi*(pf/pi)/(64*np.pi**2*s)
     
     fac1 = (1 - 4*M_W**2/s)*(1-4*m_mcp**2/s)*(M_Z/M_W)**4
-    fac2 = (s**2 + 20*s*M_W**2 + 12*M_W**4)/((s-M_Z)**2 + M_Z**2*Z_WIDTH**2)
+    fac2 = (1 + 20*M_W**2/s + 12*M_W**4/s**2)
     
-    return pref*fac1*fac2
+    amp = coupling*fac1*fac2*np.heaviside(s - M_Z**2, 0) #spin averaged amplitude
+    
+    return kin*amp
 
 
 #form factor for pion
@@ -207,7 +227,7 @@ def F_pi(s):
     return 1.20 * m_rho**2 / (m_rho**2 - s - 1j * m_rho * Gamma_rhopipi)
 
 #Pion annihilation
-def M2_pipiff(s,c2, m_f):
+def M2_pipiff(s, c2, m_f):
     return 2 * e**4 * np.abs(F_pi(s))**2 * (1/s**2) * (s**2 * (1-c2) + 4 * s * (m_f**2 * c2 - m_pi**2 * (1 - c2)) - 16 * m_f**2 * m_pi**2 * c2)
 
 # ~ def sigma_pipiff(s, m_mcp):
@@ -221,6 +241,14 @@ def sigma_pipi_ff(s, m_mcp):
     pi = np.sqrt(Ei**2 - m_pi**2)
     pf = np.sqrt(Ef**2 - m_mcp**2)
     return e**4 * np.abs(F_pi(s))**2 * (pf/pi) * (s - 4*m_pi**2) * (s + 2*m_mcp**2) / (24*np.pi * s**3)
+    
+def sigma_pipi_ss(s, m_mcp):
+    #other factors in sigma? Check. 
+    Ei = np.sqrt(s)/2
+    Ef = Ei
+    pi = np.sqrt(Ei**2 - m_pi**2)
+    pf = np.sqrt(Ef**2 - m_mcp**2)
+    return (1/4)*e**4 * np.abs(F_pi(s))**2 * (pf/pi) * (s - 4*m_pi**2) * (s - 4*m_mcp**2) / (24*np.pi * s**3)
         
 def I_integrand(lns,sigma_func, m_f, T):#log-space
     s=np.exp(lns)
@@ -235,7 +263,7 @@ def I_integrand_fermi(lns, sigma_func, m_f, T):#log-space
     z = np.sqrt(s)/T
     return s * sigma_func(s) * (s - 4 * m_f**2) * G_fermion(z)*dlns
     
-# for bosonsin the initial state. Ignoring spin-statistics for the final state
+# for bosons in the initial state. Ignoring spin-statistics for the final state
 def I_integrand_bose(lns, sigma_func, m_f, T):#log-space
     s=np.exp(lns)
     dlns = s
