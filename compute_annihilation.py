@@ -45,9 +45,9 @@ def compute_annihilation_rate_mcp_fermionic_gamma_only(task, n_temps, outdir, ma
     m_pi = 139.570 * MeV
     Q = 1.0
     
-    outfile_name = f'mcp_annihilation_rate_m_{m_mcp}_Q_1.npz'
+    outfile_name = f'mcp_annihilation_rate_m_{m_mcp:.5e}_Q_1.npz'
     if maxwell_boltzmann is True:
-        outfile_name = f'mcp_annihilation_rate_m_{m_mcp}_Q_1_MB.npz'
+        outfile_name = f'mcp_annihilation_rate_m_{m_mcp:.5e}_Q_1_MB.npz'
     outfile_path = os.path.join(outdir, outfile_name)
     
     if (args.overwrite is False) and os.path.exists(outfile_path):
@@ -218,9 +218,9 @@ def compute_annihilation_rate_mcp_fermionic(task, n_temps, outdir, maxwell_boltz
     M_W = 80369.2*MeV
     Q = 1.0
     
-    outfile_name = f'mcp_annihilation_rate_m_{m_mcp}_Q_1.npz'
+    outfile_name = f'mcp_annihilation_rate_m_{m_mcp:.5e}_Q_1.npz'
     if maxwell_boltzmann is True:
-        outfile_name = f'mcp_annihilation_rate_m_{m_mcp}_Q_1_MB.npz'
+        outfile_name = f'mcp_annihilation_rate_m_{m_mcp:.5e}_Q_1_MB.npz'
     outfile_path = os.path.join(outdir, outfile_name)
     
     if (args.overwrite is False) and os.path.exists(outfile_path):
@@ -419,9 +419,9 @@ def compute_annihilation_rate_mcp_fermionic_gamma_only(task, n_temps, outdir, ma
     m_pi = 139.570 * MeV
     Q = 1.0
     
-    outfile_name = f'mcp_annihilation_rate_m_{m_mcp}_Q_1.npz'
+    outfile_name = f'mcp_annihilation_rate_m_{m_mcp:.5e}_Q_1.npz'
     if maxwell_boltzmann is True:
-        outfile_name = f'mcp_annihilation_rate_m_{m_mcp}_Q_1_MB.npz'
+        outfile_name = f'mcp_annihilation_rate_m_{m_mcp:.5e}_Q_1_MB.npz'
     outfile_path = os.path.join(outdir, outfile_name)
     
     if (args.overwrite is False) and os.path.exists(outfile_path):
@@ -594,9 +594,9 @@ def compute_annihilation_rate_mcp_bosonic(task, n_temps, outdir, maxwell_boltzma
     M_W = 80369.2*MeV
     Q = 1.0
     
-    outfile_name = f'mcp_annihilation_rate_m_{m_mcp}_Q_1.npz'
+    outfile_name = f'mcp_annihilation_rate_m_{m_mcp:.5e}_Q_1.npz'
     if maxwell_boltzmann is True:
-        outfile_name = f'mcp_annihilation_rate_m_{m_mcp}_Q_1_MB.npz'
+        outfile_name = f'mcp_annihilation_rate_m_{m_mcp:.5e}_Q_1_MB.npz'
     outfile_path = os.path.join(outdir, outfile_name)
     
     if (args.overwrite is False) and os.path.exists(outfile_path):

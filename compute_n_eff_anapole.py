@@ -19,15 +19,15 @@ from mcp_boltzmann.boltzmann import EMMDMBoltzmann
 
 
 def worker(task):
-    m_de = task['m_de']
-    m_dp = task['m_dp']
+    m_chi = task['m_chi']
+    R = task['R']
     Q = task['Q']
     outdir = task['outdir']
     do_plots = task['do_plots']
     overwrite = task['overwrite']
     not_thermalized = task['not_thermalized']
     
-    result_dir = os.path.join(outdir, f'mde_{m_de}/mdp_{m_dp}/')
+    result_dir = os.path.join(outdir, f'R_{R}/mchi_{m_chi}/')
     result_fname = f'result_Q_{Q:.3e}.npz'
     
     if (overwrite is False) and os.path.exists(os.path.join(result_dir, result_fname)):
@@ -35,16 +35,17 @@ def worker(task):
         return None 
         
     try:
-        res = compute_neff(m_de, m_dp, Q, not_thermalized)
+        res = compute_neff(m_chi, R, Q, not_thermalized)
         
     except Exception as e:
-        print(traceback.format_exc())
         os.makedirs(result_dir, exist_ok=True)
         with open(os.path.join(result_dir, f'FAILED_Q_{Q:.3e}.txt'), 'w') as out_txt:
             print(f'{m_chi=}', file=out_txt)
             print(f'{R=}', file=out_txt)
             print(f'{Q=}', file=out_txt)
             print(f'{not_thermalized=}', file=out_txt)
+            print('----------------------------------', file=out_txt)
+            print(traceback.format_exc(), file=out_txt)
         return None
         
     return (task, res)
@@ -127,18 +128,20 @@ def save_results(task_result):
         plt.xlabel(r'Time [MeV$^{-1}$]')
         plt.ylabel(r'Temperature [MeV]')
         plt.legend()
+        plt.title('Sm Temperature evolution')
         plt.savefig(os.path.join(plot_dir, 'temp_sm.png'))
         plt.cla()
         ################################################################################################################
-        T_gam_SM_I = interp1d(time_sm, T_gam_sm)
-        T_gam_BSM_I = interp1d(time_bsm, T_gam_bsm)
+        T_gam_SM_I = interp1d(time_sm, T_gam_sm, bounds_error=False, fill_value='extrapolate')
+        T_gam_BSM_I = interp1d(time_bsm, T_gam_bsm, fill_value='extrapolate')
         
         plt.plot(time_sm, T_gam_BSM_I(time_sm)/T_gam_SM_I(time_sm))
-        plt.ylim(1e-2, 2)
+        plt.ylim(0.1, 1.5)
         
         plt.yscale('log')
         plt.xscale('log')
         plt.xlabel('Time [MeV$^{-1}$]')
+        plt.axhline(1.0)
 
         plt.savefig(os.path.join(plot_dir, 'tgam_compare.png'))
         plt.cla()
@@ -159,22 +162,15 @@ def save_results(task_result):
         plt.savefig(os.path.join(plot_dir, 'temp_bsm.png'))
         plt.cla()
         ################################################################################################################
-        plt.plot(time_bsm, T_nu_bsm/T_gam_bsm, label=r'T$_\nu$/T$_\gamma$')
-        plt.plot(time_bsm, T_dark_bsm/T_gam_bsm, label=r'T$_{\rm dark}$/T$_\gamma$')
-        plt.axhline(T_nu_sm[-1]/T_gam_sm[-1], color='black', linestyle='dashed', alpha=0.7)
-        plt.xscale('log')
-        
-        plt.xlabel('Time [MeV$^{-1}$]')
-        plt.title('Temperature Ratio')
-        plt.legend()
-        
-        plt.savefig(os.path.join(plot_dir, 'temp_ratio_time.png'))
-        plt.cla()
-        ################################################################################################################
+
         plt.plot(T_gam_bsm, T_nu_bsm/T_gam_bsm, label=r'T$_\nu$/T$_\gamma$')
         plt.plot(T_gam_bsm, T_dark_bsm/T_gam_bsm, label=r'T$_{\rm dark}$/T$_\gamma$')
         plt.axhline(T_nu_sm[-1]/T_gam_sm[-1], color='black', linestyle='dashed', alpha=0.7)
         plt.axhline(1.0, color='black', alpha=0.3)
+        
+        plt.axvline(m_chi, label='m_chi', linestyle='dotted', color='black')
+        plt.axvline(R*m_chi, label='m_mcp', linestyle='dotted', color='blue')
+        
         plt.xscale('log')
         
         plt.xlabel(r'T$_\gamma$ [MeV]')
@@ -185,7 +181,8 @@ def save_results(task_result):
         plt.savefig(os.path.join(plot_dir, 'temp_ratio.png'))
         plt.cla()
         ################################################################################################################
-        plt.plot(T_gam_bsm, Boltz.colterms_EM_DS[0](T_gam_bsm, T_dark_bsm, Q)/T_gam_bsm**6, label='annihilation')
+        plt.plot(T_gam_bsm, np.abs(Boltz.colterms_EM_DS[0](T_gam_bsm, T_dark_bsm, Q)/T_gam_bsm**6), label='annihilation')
+        plt.plot(T_gam_bsm, np.abs(Boltz.Hubble(T_gam_bsm, T_nu_bsm, T_dark_bsm)/T_gam_bsm**6), label='Hubble')
         # ~ plt.plot(T_gam_bsm, Boltz.colterms_EM_DS[1](T_gam_bsm, T_dark_bsm, Q)/T_gam_bsm**6, label='scattering')
         # ~ plt.plot(T_gam_bsm, Boltz.colterms_EM_DS[2](T_gam_bsm, T_dark_bsm, Q)/T_gam_bsm**6, label='Plasmon Decay')
         # ~ plt.plot(T_gam_bsm, Boltz.colterms_EM_DS[3](T_gam_bsm, T_dark_bsm, Q)/T_gam_bsm**6, label='Z decay')
@@ -200,7 +197,7 @@ def save_results(task_result):
         )
         
         ymax = np.max(sum_rate/T_gam_bsm**6)
-        plt.ylim(1e-5*ymax, 20*ymax)
+        plt.ylim(1e-9*ymax, 20*ymax)
         
         plt.axvline(m_chi, label='DM mass', linestyle='dashed', color='darkred')
         plt.axvline(R*m_chi, label='MCP mass', linestyle='dashed', color='darkblue')
@@ -242,19 +239,19 @@ def compute_neff(m_chi, R, Q, not_thermalized = False):
     
     #SM fermion annihilation to dark mcp scalars
     _CF_ff_ss_I = ann.load_ann_rate(
-        f'./output/rates/annihilation/anapole_R{R}/bosonic/mcp_annihilation_rate_m_{M_s}_Q_1.npz'
+        f'./output/rates/annihilation/anapole_R{R}/bosonic/mcp_annihilation_rate_m_{M_s:.5e}_Q_1.npz'
     )
     
     #SM fermion annihilation to dark mcp fermions
     _CF_ff_ff_I = ann.load_ann_rate(
-        f'./output/rates/annihilation/anapole_R{R}/fermionic/mcp_annihilation_rate_m_{M_f}_Q_1.npz'
+        f'./output/rates/annihilation/anapole_R{R}/fermionic/mcp_annihilation_rate_m_{M_f:.5e}_Q_1.npz'
     )
         
     # ~ mcp_coulomb_rate_de = load_tabulated_rate(f'./output/rates/coulomb/cluster/scan/mcp_coulomb_rate_m_{m_de}_Q_1.npz')
     # ~ mcp_coulomb_rate_dp = load_tabulated_rate(f'./output/rates/coulomb/cluster/scan/mcp_coulomb_rate_m_{m_dp}_Q_1.npz')
     
     
-    #Annihilation only until I finish the decays andcoulomb scattering
+    #Annihilation only until I finish the decays and coulomb scattering
     
     def CF_ann(T, Q):
         return Q**2*(_CF_ff_ss_I(T) + _CF_ff_ff_I(T))
@@ -286,7 +283,7 @@ def compute_neff(m_chi, R, Q, not_thermalized = False):
     # ~ Boltz.add_colterm_EM_DS(CF_Z_decay)
     
     #initial conditions
-    T_gamma_0 = 100*max(m_de, m_dp)
+    T_gamma_0 = max(100.0*M_s, 10.0)
     T_nu_0 = T_gamma_0
     T_DS_0 = Boltz.guess_initial_dark_temp(T_gamma_0)
     

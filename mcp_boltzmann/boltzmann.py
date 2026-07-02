@@ -18,7 +18,7 @@ m_mu = 105*MeV
 mev_to_K = 11.6
 MeV_to_K = 1e9*mev_to_K
 
-T_nu_dec = 3.0
+T_nu_dec = 3.0*MeV
     
 
 class MCPBoltzmann:
