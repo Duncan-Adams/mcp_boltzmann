@@ -4,7 +4,7 @@ R = 3
 mchi_min_MeV = 1e-3
 mchi_max_MeV = 1e3
 
-num_masses = 100
+num_masses = 20
 
 masses = np.geomspace(mchi_min_MeV, mchi_max_MeV, num_masses)
 

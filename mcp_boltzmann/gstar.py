@@ -64,7 +64,7 @@ def g_star_P_be(T, m, g):
 #compute nuetrino contribitions to g_star during & after electron position annihilation, so we can subtract out neutrinos from the EM plasma
 @np.vectorize
 def g_star_E_nu(T):
-    T_nd = 3
+    T_nd = 3.0
     m_e = 0.511
     g_star_e_per_nu = 0.875    
     T_nu_over_T = (2+ g_star_E_fd(T, m_e, 4))/5.5 #if we were being very very technical this should be computed via g_star_S, but it g_star_E = g_star_s for T <= 1 MeV
@@ -86,7 +86,7 @@ def g_star_E_nu(T):
 
 @np.vectorize
 def g_star_P_nu(T):
-    T_nd = 3
+    T_nd = 3.0
     m_e = 0.511
     g_star_p_per_nu = 0.875
     

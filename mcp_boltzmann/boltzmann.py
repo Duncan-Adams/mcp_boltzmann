@@ -6,6 +6,7 @@ from scipy.integrate import solve_ivp
 
 from mcp_boltzmann.distributions import *
 from mcp_boltzmann.gstar import gstar_E_EM, d_gstar_E_EM_dT, w_EM
+import mcp_boltzmann.sm as sm
 
 #Fundametal parameters
 MeV = 1
@@ -18,26 +19,45 @@ m_mu = 105*MeV
 mev_to_K = 11.6
 MeV_to_K = 1e9*mev_to_K
 
-T_nu_dec = 3.0*MeV
+# ~ T_nu_dec = 3.0*MeV
     
 
 class MCPBoltzmann:
-    def __init__(self, m_mcp, Q, rtol=1e-5, atol=1e-5):
+    #T_nu dec is the temperature at which we instantaneously decouple neutrinos. This is implemented by running an initial solver from T_init -> T_nu_dec
+    #which includes the neutrinos in the SM plasma. And then running a second solver which allows the neutrinos to adiabatically cool but models the DM-SM interactions
+    #Non-instantaneous decoupling can be recovered by setting T_nu_dec to 10 MeV and adding the appropriate collision terms to the solver from sm.py
+    def __init__(self, m_mcp, Q, T_nu_dec = 3.0*MeV, rtol=1e-5, atol=1e-5):
         self.m_mcp = m_mcp
         self.Q = Q
+        self.T_nu_dec = T_nu_dec
         self.colterms_EM_NU = [] #collision terms between em sector and nuetrino sector
         self.colterms_EM_DS = [] #collision terms between em sector and dark sector
         self.rtol = rtol
         self.atol = atol
         
     def rho_EM(self, T_gam):
-        return (np.pi**2/30)*gstar_E_EM(T_gam, T_nu_dec)*T_gam**4
+        return (np.pi**2/30)*gstar_E_EM(T_gam, self.T_nu_dec)*T_gam**4
     
     def p_EM(self, T_gam):
-        return w_EM(T_gam, T_nu_dec)*self.rho_EM(T_gam)
+        return w_EM(T_gam, self.T_nu_dec)*self.rho_EM(T_gam)
+        
+    # ~ def rho_EM(self, T_gam):
+        # ~ return 2*(np.pi**2/30)*T_gam**4 + rho_e(T_gam) - sm.P_int(T_gam) + T_gam*sm.dP_intdT(T_gam)
+    
+    # ~ def p_EM(self, T_gam):
+        # ~ return (1.0/3.0)*2*(np.pi**2/30)*T_gam**4 + p_e(T_gam) + sm.P_int(T_gam)
+
+    # ~ def rho_EM(self, T_gam):
+        # ~ return (np.pi**2/30)*gstar_E_EM(T_gam, self.T_nu_dec)*T_gam**4
+    
+    # ~ def p_EM(self, T_gam):
+        # ~ return w_EM(T_gam, self.T_nu_dec)*self.rho_EM(T_gam)
     
     def drho_EM_dT(self, T_gam):
-        return 4*(np.pi**2/30)*gstar_E_EM(T_gam, T_nu_dec)*T_gam**3 + (np.pi**2/30)*d_gstar_E_EM_dT(T_gam, T_nu_dec)*T_gam**4
+        return 4*(np.pi**2/30)*gstar_E_EM(T_gam, self.T_nu_dec)*T_gam**3 + (np.pi**2/30)*d_gstar_E_EM_dT(T_gam, self.T_nu_dec)*T_gam**4 
+ 
+    # ~ def drho_EM_dT(self, T_gam):
+        # ~ return 4*2*(np.pi**2/30)*T_gam**3 + drho_edT(T_gam) + T_gam * sm.d2P_intdT2(T_gam)
         
     def rho_neutrino(self, T_nu):
         return 3*rho_nu(T_nu, np.zeros_like(T_nu))
@@ -59,34 +79,33 @@ class MCPBoltzmann:
         
     def rho_tot_sm(self, T_gam, T_nu):
         return (
-            np.heaviside(T_gam - T_nu_dec, 1.0)*self.rho_EM(T_gam) 
-          + np.heaviside(T_nu_dec - T_gam, 0.0)*(self.rho_EM(T_gam) + self.rho_neutrino(T_nu))
+            np.heaviside(T_gam - self.T_nu_dec, 1.0)*self.rho_EM(T_gam) 
+          + np.heaviside(self.T_nu_dec - T_gam, 0.0)*(self.rho_EM(T_gam) + self.rho_neutrino(T_nu))
         )
         
     def p_tot_sm(self,T_gam, T_nu):
         return (
-            np.heaviside(T_gam - T_nu_dec, 1.0)*self.p_EM(T_gam) 
-          + np.heaviside(T_nu_dec - T_gam, 0.0)*(self.p_EM(T_gam) + (1/3)*self.rho_neutrino(T_nu))
+            np.heaviside(T_gam - self.T_nu_dec, 1.0)*self.p_EM(T_gam) 
+          + np.heaviside(self.T_nu_dec - T_gam, 0.0)*(self.p_EM(T_gam) + (1/3)*self.rho_neutrino(T_nu))
         )
             
     def rho_tot_bsm(self, T_gam, T_nu, T_ds):
         return (
-            np.heaviside(T_gam - T_nu_dec, 1.0)*(self.rho_EM(T_gam) + self.rho_DS(T_ds))
-          + np.heaviside(T_nu_dec - T_gam, 0.0)*(self.rho_EM(T_gam) + self.rho_neutrino(T_nu) + self.rho_DS(T_ds))
+            np.heaviside(T_gam - self.T_nu_dec, 1.0)*(self.rho_EM(T_gam) + self.rho_DS(T_ds))
+          + np.heaviside(self.T_nu_dec - T_gam, 0.0)*(self.rho_EM(T_gam) + self.rho_neutrino(T_nu) + self.rho_DS(T_ds))
         )
 
     def p_tot_bsm(self, T_gam, T_nu, T_ds):
         return (
-            np.heaviside(T_gam - T_nu_dec, 1.0)*(self.p_EM(T_gam) + self.p_DS(T_ds)) 
-          + np.heaviside(T_nu_dec - T_gam, 0.0)*(self.p_EM(T_gam) + (1/3)*self.rho_neutrino(T_nu) + self.p_DS(T_ds))
+            np.heaviside(T_gam - self.T_nu_dec, 1.0)*(self.p_EM(T_gam) + self.p_DS(T_ds)) 
+          + np.heaviside(self.T_nu_dec - T_gam, 0.0)*(self.p_EM(T_gam) + (1/3)*self.rho_neutrino(T_nu) + self.p_DS(T_ds))
         )    
     
     def Hubble_SM(self, T_gam, T_nu):
         return np.sqrt((8 * np.pi)/(3 * M_Planck**2) * (self.rho_tot_sm(T_gam, T_nu)))
             
     def Hubble(self, T_gam, T_nu, T_ds):    
-        return np.sqrt((8 * np.pi)/(3 * M_Planck**2) * (self.rho_tot_bsm(T_gam, T_nu, T_ds)))
-        
+        return np.sqrt((8 * np.pi)/(3 * M_Planck**2) * (self.rho_tot_bsm(T_gam, T_nu, T_ds)))        
 
     def add_colterm_EM_NU(self, colterm):
         '''
@@ -133,7 +152,7 @@ class MCPBoltzmann:
         return (1/self.drho_EM_dT(T_gam))*(hub_term + col_term)
        
     def dT_neutrino_dt(self, T_gam, T_nu, T_ds):      
-        if T_gam >= T_nu_dec:
+        if T_gam >= self.T_nu_dec:
             return np.atleast_1d(self.dT_EM_dt(T_gam, T_nu, T_ds))
             
         H = self.Hubble(T_gam, T_nu, T_ds)
@@ -144,7 +163,7 @@ class MCPBoltzmann:
         return (1/self.drho_neutrino_dT(T_nu))*(hub_term + col_term)
         
     def dT_neutrino_dt_SM(self, T_gam, T_nu):        
-        if T_gam >= T_nu_dec:
+        if T_gam >= self.T_nu_dec:
             return self.dT_EM_dt_SM(T_gam, T_nu)
         
         H = self.Hubble_SM(T_gam, T_nu)
@@ -184,7 +203,7 @@ class MCPBoltzmann:
         def nu_dec(t, vec):
             T_gam, T_ds, a = vec
             
-            return T_gam - T_nu_dec
+            return T_gam - self.T_nu_dec
         nu_dec.terminal = True
         
         def dT_pre_nudec(t, vec):
@@ -265,7 +284,7 @@ class MCPBoltzmann:
             T_gam = np.exp(L_gam)
             T_ds = np.exp(L_ds)
             
-            return T_gam - T_nu_dec
+            return T_gam - self.T_nu_dec
         nu_dec.terminal = True
         
         def dT_pre_nudec(t, vec):
@@ -274,25 +293,25 @@ class MCPBoltzmann:
             T_ds = np.exp(L_ds)
             T_nu = T_gam
             res = np.array([
-                (1/T_gam)*self.dT_EM_dt(T_gam, T_nu, T_ds)[0],
-                (1/T_ds)*self.dT_DS_dt(T_gam, T_nu, T_ds)[0],
-                a*self.Hubble(T_gam, T_nu, T_ds)[0]
-            ])
+                (1/T_gam)*self.dT_EM_dt(T_gam, T_nu, T_ds),
+                (1/T_ds)*self.dT_DS_dt(T_gam, T_nu, T_ds),
+                a*self.Hubble(T_gam, T_nu, T_ds)
+            ]).reshape(3)
             return res
             
         def dT_post_nudec(t, vec):
             T_gam, T_nu, T_ds, a = vec
             res = np.array([
-                self.dT_EM_dt(T_gam, T_nu, T_ds)[0],
-                self.dT_neutrino_dt(T_gam, T_nu, T_ds)[0],
-                self.dT_DS_dt(T_gam, T_nu, T_ds)[0],
-                a*self.Hubble(T_gam, T_nu, T_ds)[0]
-            ])
+                self.dT_EM_dt(T_gam, T_nu, T_ds),
+                self.dT_neutrino_dt(T_gam, T_nu, T_ds),
+                self.dT_DS_dt(T_gam, T_nu, T_ds),
+                a*self.Hubble(T_gam, T_nu, T_ds)
+            ]).reshape(4)
             return res
             
         
         IC_0 = [np.log(T_gam0), np.log(T_ds0), 1.0]
-        t0 = 1./(2 * self.Hubble(T_gam0, T_nu0, T_ds0))[0]
+        t0 = (1./(2 * self.Hubble(T_gam0, T_nu0, T_ds0)))[0]
         t_max = 1e29
         t_eval = np.geomspace(t0, t_max, 500)
         
@@ -340,7 +359,7 @@ class MCPBoltzmann:
         
         def nu_dec(t, vec):
             T_gam, a = vec
-            return T_gam - T_nu_dec
+            return T_gam - self.T_nu_dec
             
         nu_dec.terminal = True
         
@@ -403,7 +422,7 @@ class MCPBoltzmann:
         N_eff_no_nu_dec = (8/7)*(11/4)**(4/3)*((self.rho_EM(T_gam) + self.rho_DS(T_ds) - rho_gam(T_gam))/rho_gam(T_gam))
         
         return np.where(
-            T_gam < T_nu_dec,
+            T_gam < self.T_nu_dec,
             N_eff_nu_dec,
             N_eff_no_nu_dec
         )
@@ -413,7 +432,7 @@ class MCPBoltzmann:
         N_eff_no_nu_dec = (8/7)*(11/4)**(4/3)*((self.rho_EM(T_gam) - rho_gam(T_gam))/rho_gam(T_gam))
         
         return np.where(
-            T_gam < T_nu_dec,
+            T_gam < self.T_nu_dec,
             N_eff_nu_dec,
             N_eff_no_nu_dec
         )
@@ -423,11 +442,13 @@ class MCPBoltzmann:
     def Delta_Neff_ds_only(self, T_gam, T_ds):
         return (8/7)*(11/4)**(4/3)*(self.rho_DS(T_ds)/self.rho_EM(T_gam))
         
+        
 class ADMBoltzmann(MCPBoltzmann):
-    def __init__(self, m_de, m_dp, Q, rtol=1e-5, atol=1e-5):
+    def __init__(self, m_de, m_dp, Q, T_nu_dec = 3.0*MeV, rtol=1e-5, atol=1e-5):
         self.m_de = m_de
         self.m_dp = m_dp
         self.Q = Q
+        self.T_nu_dec = T_nu_dec
         self.colterms_EM_NU = [] #collision terms between em sector and nuetrino sector
         self.colterms_EM_DS = [] #collision terms between em sector and dark sector
         self.rtol = rtol
@@ -445,12 +466,13 @@ class ADMBoltzmann(MCPBoltzmann):
 #this class solves thermal histories for nuetral dark matter with EM form factors that are part of dark sectors e.g. magnetic dipole moment or anapole momemnts 
 #THese theories typically have a scalar and fermionic millicharged particle with a massless dark photon
 class EMMDMBoltzmann(MCPBoltzmann):
-        def __init__(self, m_chi, M_s, M_f, Q, g_chi = 2, rtol=1e-5, atol=1e-5):
+        def __init__(self, m_chi, M_s, M_f, Q, T_nu_dec = 3.0*MeV, g_chi = 2, rtol=1e-5, atol=1e-5):
             self.m_chi = m_chi # mass of (majorana) fermionic dm particle
             self.g_chi = g_chi #2 for majorana, 4 for dirac fermion
             self.M_s = M_s # mass of scalar millicharged particle
             self.M_f = M_f # mass of fermionic millicharged particle
             self.Q = Q
+            self.T_nu_dec = T_nu_dec
             self.colterms_EM_NU = [] #collision terms between em sector and nuetrino sector
             self.colterms_EM_DS = [] #collision terms between em sector and dark sector
             self.rtol = rtol

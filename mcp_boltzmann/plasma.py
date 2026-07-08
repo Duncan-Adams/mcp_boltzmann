@@ -1,7 +1,9 @@
-# Calculation of photon plasma mass
+# Calculation of photon plasma mass and boson decay rates
+import os
 import numpy as np
 
 from scipy.integrate import quad
+from scipy.interpolate import interp1d
 from mcp_boltzmann.distributions import n_gam, n_BE
 
 
@@ -41,6 +43,8 @@ q_t = 2/3
 
 M_Z = 91188.0 #MeV
 
+#Photon plasma mass calculation
+
 def mgamma_integrand(z, x):
     return np.sqrt(z**2 - x**2)/(np.exp(z)+1)
 
@@ -54,7 +58,7 @@ def mgamma_int_bose(x):
     return quad(mgamma_integrand_bose, x, np.inf, args=(x), epsabs=1e-12, epsrel=1e-12)[0]
 
 @np.vectorize
-def m_gam_2(T_sm):
+def calc_m_gam_2(T_sm):
     #squared photon plasma mass as a function of plasma temperature, ignoring hadronic contributions below the QCD phase transition
     x_e = m_e/T_sm
     x_mu = m_mu/T_sm
@@ -81,9 +85,28 @@ def m_gam_2(T_sm):
       + q_t**2*mgamma_int(x_t)
       )
       
-    gb = 3*mgamma_int_bose(x_w)
+    # ~ gb = 3*mgamma_int_bose(x_w)
+    gb = 0.0
 
     return (4*alpha/np.pi)*T_sm**2*(qed + qcd*np.heaviside(T_sm - LQCD, 0) + gb)
+
+
+_base_path = os.path.dirname(os.path.abspath(__file__))
+_mgamma_int_path = os.path.join(_base_path, 'mgamma_int.npz')
+
+if not os.path.exists(_mgamma_int_path):
+    _T_int = np.geomspace(1e-6, 200*1e3, 2000)
+    
+    _m_gam_2_int = calc_m_gam_2(_T_int)
+    
+    np.savez_compressed(_mgamma_int_path, temperature=_T_int, mgam2 = _m_gam_2_int)
+    
+_mgam_data = np.load(_mgamma_int_path)
+
+m_gam_2 = interp1d(_mgam_data['temperature'], _mgam_data['mgam2'], bounds_error=False, fill_value=0.0)
+
+del _mgam_data
+
 
 def m_B_2(T_sm):
     '''
@@ -112,6 +135,19 @@ def C_plasmon(T_sm, T_ds, m_mcp, Q_mcp):
     sq = np.sqrt(arg_sqrt*np.heaviside(arg_sqrt, 0))
 
     return ((1/3)*alpha*Q_mcp**2)*(mg2 + 2*m_mcp**2)*sq*(n_gam(T_sm) - n_gam(T_ds))
+    
+    
+def C_plasmon_bosonic(T_sm, T_ds, m_mcp, Q_mcp):
+    #it looks like 2206.13530 didnt include the factor of 2 in the definition of n_gamma, otherwise they have a spurious factor
+    #of 2 compared to vogel and redondo
+    mg2 = m_gam_2(T_sm)
+    
+    #this is fine b/c arg_sqrt will nan when mgam=0, but this will cause the whole rate to evaluate to 0, which it should at mgam=0
+    arg_sqrt = np.nan_to_num((1 - 4*m_mcp**2/mg2)) 
+    sq = np.sqrt(arg_sqrt*np.heaviside(arg_sqrt, 0))
+
+    # THIS NEEDS TO BE CHECKED
+    return ((1/12)*alpha*Q_mcp**2)*(mg2 - 4*m_mcp**2)*sq*(n_gam(T_sm) - n_gam(T_ds))    
     
 def C_plasmon_forwards(T_sm, m_mcp, Q_mcp):
     mg2 = m_gam_2(T_sm)
@@ -143,6 +179,29 @@ def C_B_decay(T_sm, T_ds, m_mcp, Q_mcp):
     
     return ((1/3)*alpha*Q_mcp**2/c2_theta_w**2)*(mB2 + 2*m_mcp**2)*sq*(n_gam(T_sm) - n_gam(T_ds)) #I think its okay to use n_gam assuming massless distribtution since m_B ~ 0.1 T
 
+def C_B_decay_bosonic(T_sm, T_ds, m_mcp, Q_mcp):
+    '''
+    Compute B boson decay collision term
+    
+    Parameters
+    ----------
+    T_sm - standard model temperature in MeV
+    T_ds - dark sector temperature in MeV
+    m_mcp - complex scalar millicharged particle mass in MeV
+    Q_MCP - millicharge (dimensionless)
+    
+    Returns
+    -------
+    (float) - collision term from B boson decay in MeV^5
+    '''
+    mB2 = m_B_2(T_sm)
+    
+    arg_sqrt = np.nan_to_num((1 - 4*m_mcp**2/mB2))
+    sq = np.sqrt(arg_sqrt*np.heaviside(arg_sqrt, 0))
+    
+    
+    ## THIS NEEDS TO BE CHECKED
+    return ((1/12)*alpha*Q_mcp**2/c2_theta_w**2)*(mB2 - 4*m_mcp**2)*sq*(n_gam(T_sm) - n_gam(T_ds)) #I think its okay to use n_gam assuming massless distribtution since m_B ~ 0.1 T
     
 
 def Gamma_Z_xx(m_mcp, Q_mcp):
@@ -154,6 +213,19 @@ def Gamma_Z_xx(m_mcp, Q_mcp):
     
     return pref*M_Z*sq*(1+ (2*m_mcp**2/M_Z**2))
     
+def Gamma_Z_xx_bosonic(m_mcp, Q_mcp):
+    #we probably dont care about running of alpha even though its O(10%) larger at M_Z
+    
+    pref = Q_mcp**2*alpha*tan2_theta_w/12
+    arg_sqrt = np.nan_to_num((1 - 4*m_mcp**2/M_Z**2))
+    sq = np.sqrt(arg_sqrt*np.heaviside(arg_sqrt, 0))
+    
+    return pref*M_Z*sq**3
+    
 
 def C_Z_decay(T_sm, T_ds, m_mcp, Q_mcp):
     return Gamma_Z_xx(m_mcp, Q_mcp)*M_Z*(n_BE(T_sm, np.zeros_like(T_sm), M_Z, g=3.0) - n_BE(T_ds, np.zeros_like(T_ds), M_Z, g=3.0))*np.heaviside(T_EW - T_sm, 0)
+
+#decay collision integral to scalar mcps
+def C_Z_decay_bosonic(T_sm, T_ds, m_mcp, Q_mcp):
+    return Gamma_Z_xx_bosonic(m_mcp, Q_mcp)*M_Z*(n_BE(T_sm, np.zeros_like(T_sm), M_Z, g=3.0) - n_BE(T_ds, np.zeros_like(T_ds), M_Z, g=3.0))*np.heaviside(T_EW - T_sm, 0)

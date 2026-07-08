@@ -16,6 +16,7 @@ import mcp_boltzmann.elastic_scattering as elscat
 import mcp_boltzmann.plasma as plas
 from mcp_boltzmann import annihilation as ann
 from mcp_boltzmann.boltzmann import EMMDMBoltzmann
+from mcp_boltzmann import sm as sm
 
 
 def worker(task):
@@ -109,7 +110,7 @@ def save_results(task_result):
         
     np.savez_compressed(
         os.path.join(result_dir, f'result_Q_{Q:.3e}.npz'),
-        m_ch = m_chi,
+        m_chi = m_chi,
         R = R,
         Q = Q,
         N_eff_sm = N_eff_sm,
@@ -120,97 +121,109 @@ def save_results(task_result):
     )
         
     if do_plots is True:
-        plt.plot(time_sm, T_gam_sm, label=r'T$_\gamma$')
-        plt.plot(time_sm, T_nu_sm, label=r'T$_\nu$')
-        plt.yscale('log')
-        plt.xscale('log')
+        try:
+            plt.plot(time_sm, T_gam_sm, label=r'T$_\gamma$')
+            plt.plot(time_sm, T_nu_sm, label=r'T$_\nu$')
+            plt.yscale('log')
+            plt.xscale('log')
+            
+            plt.xlabel(r'Time [MeV$^{-1}$]')
+            plt.ylabel(r'Temperature [MeV]')
+            plt.legend()
+            plt.title('Sm Temperature evolution')
+            plt.savefig(os.path.join(plot_dir, 'temp_sm.png'))
+            plt.cla()
+            ################################################################################################################
+            T_gam_SM_I = interp1d(time_sm, T_gam_sm, bounds_error=False, fill_value='extrapolate')
+            T_gam_BSM_I = interp1d(time_bsm, T_gam_bsm, fill_value='extrapolate')
+            
+            plt.plot(time_sm, T_gam_BSM_I(time_sm)/T_gam_SM_I(time_sm))
+            plt.ylim(0.1, 1.5)
+            
+            plt.yscale('log')
+            plt.xscale('log')
+            plt.xlabel('Time [MeV$^{-1}$]')
+            plt.axhline(1.0)
+    
+            plt.savefig(os.path.join(plot_dir, 'tgam_compare.png'))
+            plt.cla()
+            ################################################################################################################        
+            plt.plot(time_bsm, T_gam_bsm, label=r'T$_\gamma$')
+            plt.plot(time_bsm, T_nu_bsm, label=r'T$_{\nu}$')
+            plt.plot(time_bsm, T_dark_bsm, label=r'T$_{\rm ds}$')
+            
+            plt.plot(time_bsm, T_gam_bsm[0]*np.sqrt(time_bsm[0]/time_bsm), linestyle='dashed', color='black', alpha=0.5)
+            plt.plot(time_bsm, T_nu_bsm[-1]*np.sqrt(time_bsm[-1]/time_bsm), linestyle='dashed', color='black', alpha=0.5)
+            
+            plt.yscale('log')
+            plt.xscale('log')
+            plt.xlabel(r'Time [MeV$^{-1}$]')
+            plt.ylabel(r'Temperature [MeV]')
+            
+            plt.legend()
+            plt.savefig(os.path.join(plot_dir, 'temp_bsm.png'))
+            plt.cla()
+            ################################################################################################################
+    
+            plt.plot(T_gam_bsm, T_nu_bsm/T_gam_bsm, label=r'T$_\nu$/T$_\gamma$')
+            plt.plot(T_gam_bsm, T_dark_bsm/T_gam_bsm, label=r'T$_{\rm dark}$/T$_\gamma$')
+            plt.axhline(T_nu_sm[-1]/T_gam_sm[-1], color='black', linestyle='dashed', alpha=0.7)
+            plt.axhline(1.0, color='black', alpha=0.3)
+            
+            plt.axvline(m_chi, label='m_chi', linestyle='dotted', color='black')
+            plt.axvline(R*m_chi, label='m_mcp', linestyle='dotted', color='blue')
+            
+            plt.xscale('log')
+            
+            plt.xlabel(r'T$_\gamma$ [MeV]')
+            plt.title('Temperature Ratio')
+            plt.gca().invert_xaxis()
+            plt.legend()
+            
+            plt.savefig(os.path.join(plot_dir, 'temp_ratio.png'))
+            plt.cla()
+            ################################################################################################################
+            plt.plot(T_gam_bsm, np.abs(Boltz.colterms_EM_DS[0](T_gam_bsm, T_dark_bsm, Q)/T_gam_bsm**6), label='annihilation')
+            plt.plot(T_gam_bsm, np.abs(Boltz.Hubble(T_gam_bsm, T_nu_bsm, T_dark_bsm)/T_gam_bsm**6), label='Hubble')
+            # ~ plt.plot(T_gam_bsm, Boltz.colterms_EM_DS[1](T_gam_bsm, T_dark_bsm, Q)/T_gam_bsm**6, label='scattering')
+            plt.plot(T_gam_bsm, Boltz.colterms_EM_DS[1](T_gam_bsm, T_dark_bsm, Q)/T_gam_bsm**6, label='Plasmon Decay')
+            plt.plot(T_gam_bsm, Boltz.colterms_EM_DS[2](T_gam_bsm, T_dark_bsm, Q)/T_gam_bsm**6, label='Z decay')
+            plt.xscale('log')
+            plt.yscale('log')
+            
+            sum_rate = (
+                Boltz.colterms_EM_DS[0](T_gam_bsm, T_dark_bsm, Q)
+                # ~ +Boltz.colterms_EM_DS[1](T_gam_bsm, T_dark_bsm, Q)
+                +Boltz.colterms_EM_DS[1](T_gam_bsm, T_dark_bsm, Q)
+                +Boltz.colterms_EM_DS[2](T_gam_bsm, T_dark_bsm, Q)
+            )
+            
+            ymax = np.max(sum_rate/T_gam_bsm**6)
+            plt.ylim(1e-9*ymax, 20*ymax)
+            
+            plt.axvline(m_chi, label='DM mass', linestyle='dashed', color='darkred')
+            plt.axvline(R*m_chi, label='MCP mass', linestyle='dashed', color='darkblue')
+    
+            plt.gca().invert_xaxis()
+            
+            plt.xlabel(r'T$_\gamma$ [MeV]')
+            plt.title(r'C/$T^6_\gamma$ [MeV$^{-1}$]')
+            plt.legend()
+            
+            plt.savefig(os.path.join(plot_dir, 'rates.png'))
+            plt.cla()
         
-        plt.xlabel(r'Time [MeV$^{-1}$]')
-        plt.ylabel(r'Temperature [MeV]')
-        plt.legend()
-        plt.title('Sm Temperature evolution')
-        plt.savefig(os.path.join(plot_dir, 'temp_sm.png'))
-        plt.cla()
-        ################################################################################################################
-        T_gam_SM_I = interp1d(time_sm, T_gam_sm, bounds_error=False, fill_value='extrapolate')
-        T_gam_BSM_I = interp1d(time_bsm, T_gam_bsm, fill_value='extrapolate')
-        
-        plt.plot(time_sm, T_gam_BSM_I(time_sm)/T_gam_SM_I(time_sm))
-        plt.ylim(0.1, 1.5)
-        
-        plt.yscale('log')
-        plt.xscale('log')
-        plt.xlabel('Time [MeV$^{-1}$]')
-        plt.axhline(1.0)
-
-        plt.savefig(os.path.join(plot_dir, 'tgam_compare.png'))
-        plt.cla()
-        ################################################################################################################        
-        plt.plot(time_bsm, T_gam_bsm, label=r'T$_\gamma$')
-        plt.plot(time_bsm, T_nu_bsm, label=r'T$_{\nu}$')
-        plt.plot(time_bsm, T_dark_bsm, label=r'T$_{\rm ds}$')
-        
-        plt.plot(time_bsm, T_gam_bsm[0]*np.sqrt(time_bsm[0]/time_bsm), linestyle='dashed', color='black', alpha=0.5)
-        plt.plot(time_bsm, T_nu_bsm[-1]*np.sqrt(time_bsm[-1]/time_bsm), linestyle='dashed', color='black', alpha=0.5)
-        
-        plt.yscale('log')
-        plt.xscale('log')
-        plt.xlabel(r'Time [MeV$^{-1}$]')
-        plt.ylabel(r'Temperature [MeV]')
-        
-        plt.legend()
-        plt.savefig(os.path.join(plot_dir, 'temp_bsm.png'))
-        plt.cla()
-        ################################################################################################################
-
-        plt.plot(T_gam_bsm, T_nu_bsm/T_gam_bsm, label=r'T$_\nu$/T$_\gamma$')
-        plt.plot(T_gam_bsm, T_dark_bsm/T_gam_bsm, label=r'T$_{\rm dark}$/T$_\gamma$')
-        plt.axhline(T_nu_sm[-1]/T_gam_sm[-1], color='black', linestyle='dashed', alpha=0.7)
-        plt.axhline(1.0, color='black', alpha=0.3)
-        
-        plt.axvline(m_chi, label='m_chi', linestyle='dotted', color='black')
-        plt.axvline(R*m_chi, label='m_mcp', linestyle='dotted', color='blue')
-        
-        plt.xscale('log')
-        
-        plt.xlabel(r'T$_\gamma$ [MeV]')
-        plt.title('Temperature Ratio')
-        plt.gca().invert_xaxis()
-        plt.legend()
-        
-        plt.savefig(os.path.join(plot_dir, 'temp_ratio.png'))
-        plt.cla()
-        ################################################################################################################
-        plt.plot(T_gam_bsm, np.abs(Boltz.colterms_EM_DS[0](T_gam_bsm, T_dark_bsm, Q)/T_gam_bsm**6), label='annihilation')
-        plt.plot(T_gam_bsm, np.abs(Boltz.Hubble(T_gam_bsm, T_nu_bsm, T_dark_bsm)/T_gam_bsm**6), label='Hubble')
-        # ~ plt.plot(T_gam_bsm, Boltz.colterms_EM_DS[1](T_gam_bsm, T_dark_bsm, Q)/T_gam_bsm**6, label='scattering')
-        # ~ plt.plot(T_gam_bsm, Boltz.colterms_EM_DS[2](T_gam_bsm, T_dark_bsm, Q)/T_gam_bsm**6, label='Plasmon Decay')
-        # ~ plt.plot(T_gam_bsm, Boltz.colterms_EM_DS[3](T_gam_bsm, T_dark_bsm, Q)/T_gam_bsm**6, label='Z decay')
-        plt.xscale('log')
-        plt.yscale('log')
-        
-        sum_rate = (
-            Boltz.colterms_EM_DS[0](T_gam_bsm, T_dark_bsm, Q)
-            # ~ +Boltz.colterms_EM_DS[1](T_gam_bsm, T_dark_bsm, Q)
-            # ~ +Boltz.colterms_EM_DS[2](T_gam_bsm, T_dark_bsm, Q)
-            # ~ +Boltz.colterms_EM_DS[3](T_gam_bsm, T_dark_bsm, Q)
-        )
-        
-        ymax = np.max(sum_rate/T_gam_bsm**6)
-        plt.ylim(1e-9*ymax, 20*ymax)
-        
-        plt.axvline(m_chi, label='DM mass', linestyle='dashed', color='darkred')
-        plt.axvline(R*m_chi, label='MCP mass', linestyle='dashed', color='darkblue')
-
-        plt.gca().invert_xaxis()
-        
-        plt.xlabel(r'T$_\gamma$ [MeV]')
-        plt.title(r'C/$T^6_\gamma$ [MeV$^{-1}$]')
-        plt.legend()
-        
-        plt.savefig(os.path.join(plot_dir, 'rates.png'))
-        plt.cla()
-        
+        except Exception as e:
+            os.makedirs(result_dir, exist_ok=True)
+            with open(os.path.join(result_dir, f'FAILED_PLOTS_Q_{Q:.3e}.txt'), 'w') as out_txt:
+                print(f'{m_chi=}', file=out_txt)
+                print(f'{R=}', file=out_txt)
+                print(f'{Q=}', file=out_txt)
+                print(f'{not_thermalized=}', file=out_txt)
+                print('----------------------------------', file=out_txt)
+                print(traceback.format_exc(), file=out_txt)
+            return None
+                
     return 
     
 from scipy.interpolate import LinearNDInterpolator
@@ -239,12 +252,12 @@ def compute_neff(m_chi, R, Q, not_thermalized = False):
     
     #SM fermion annihilation to dark mcp scalars
     _CF_ff_ss_I = ann.load_ann_rate(
-        f'./output/rates/annihilation/anapole_R{R}/bosonic/mcp_annihilation_rate_m_{M_s:.5e}_Q_1.npz'
+        f'./output/rates/annihilation/anapole_R{R}/bosonic/mcp_annihilation_rate_m_{M_s:.3e}_Q_1.npz'
     )
     
     #SM fermion annihilation to dark mcp fermions
     _CF_ff_ff_I = ann.load_ann_rate(
-        f'./output/rates/annihilation/anapole_R{R}/fermionic/mcp_annihilation_rate_m_{M_f:.5e}_Q_1.npz'
+        f'./output/rates/annihilation/anapole_R{R}/fermionic/mcp_annihilation_rate_m_{M_f:.3e}_Q_1.npz'
     )
         
     # ~ mcp_coulomb_rate_de = load_tabulated_rate(f'./output/rates/coulomb/cluster/scan/mcp_coulomb_rate_m_{m_de}_Q_1.npz')
@@ -262,28 +275,35 @@ def compute_neff(m_chi, R, Q, not_thermalized = False):
     # ~ def CF_scatt_sm_ds(T_sm, T_ds, Q):
         # ~ return Q**2*(mcp_coulomb_rate_de(T_sm, T_ds) + mcp_coulomb_rate_dp(T_sm, T_ds))
 
-    # ~ def CF_plas(T_sm, T_ds, Q):
-        # ~ T_EW = 160*GeV
-        
-        # ~ pdecay_de = np.heaviside(T_EW - T_sm, 0)*plas.C_plasmon(T_sm, T_ds, m_de, Q) 
-        # ~ bdecay_de = np.heaviside(T_sm - T_EW, 1)*plas.C_B_decay(T_sm, T_ds, m_de, Q)
+    def CF_plas(T_sm, T_ds, Q):
+        T_EW = 160*GeV
     
-        # ~ pdecay_dp = np.heaviside(T_EW - T_sm, 0)*plas.C_plasmon(T_sm, T_ds, m_dp, Q) 
-        # ~ bdecay_dp = np.heaviside(T_sm - T_EW, 1)*plas.C_B_decay(T_sm, T_ds, m_dp, Q)
+        #dirac fermion mcps
+        pdecay_ff = np.heaviside(T_EW - T_sm, 0)*plas.C_plasmon(T_sm, T_ds, M_f, Q) 
+        bdecay_ff = np.heaviside(T_sm - T_EW, 1)*plas.C_B_decay(T_sm, T_ds, M_f, Q)
+    
+        #complex scalar mcps
+        pdecay_ss = np.heaviside(T_EW - T_sm, 0)*plas.C_plasmon_bosonic(T_sm, T_ds, M_s, Q) 
+        bdecay_ss = np.heaviside(T_sm - T_EW, 1)*plas.C_B_decay_bosonic(T_sm, T_ds, M_s, Q)
         
-        # ~ return pdecay_de + bdecay_de + pdecay_dp + bdecay_dp
+        return pdecay_ff + bdecay_ff + pdecay_ss + bdecay_ss
         
-    # ~ def CF_Z_decay(T_sm, T_ds, Q):
-        # ~ return plas.C_Z_decay(T_sm, T_ds, m_de, Q) + plas.C_Z_decay(T_sm, T_ds, m_dp, Q) 
+    def CF_Z_decay(T_sm, T_ds, Q):
+        return plas.C_Z_decay(T_sm, T_ds, M_f, Q) + plas.C_Z_decay_bosonic(T_sm, T_ds, M_s, Q) 
         
-    Boltz = EMMDMBoltzmann(m_chi, M_s, M_f, Q, rtol=1e-8, atol=1e-8)
+    # ~ def C_nu(T_gam, T_nu):
+        # ~ return sm.DeltaRho_nue(T_gam, T_nu, 0.0) + 2*sm.DeltaRho_numu(T_gam, T_nu, 0.0)
+        
+    Boltz = EMMDMBoltzmann(m_chi, M_s, M_f, Q, T_nu_dec = 10.0, rtol=1e-8, atol=1e-8)
     Boltz.add_colterm_EM_DS(CF_ann_sm_ds)
     # ~ Boltz.add_colterm_EM_DS(CF_scatt_sm_ds)
-    # ~ Boltz.add_colterm_EM_DS(CF_plas)
-    # ~ Boltz.add_colterm_EM_DS(CF_Z_decay)
+    Boltz.add_colterm_EM_DS(CF_plas)
+    Boltz.add_colterm_EM_DS(CF_Z_decay)
+    
+    # ~ Boltz.add_colterm_EM_NU(C_nu)
     
     #initial conditions
-    T_gamma_0 = max(100.0*M_s, 10.0)
+    T_gamma_0 = max(100.0*M_s, 20.0)
     T_nu_0 = T_gamma_0
     T_DS_0 = Boltz.guess_initial_dark_temp(T_gamma_0)
     
@@ -296,7 +316,7 @@ def compute_neff(m_chi, R, Q, not_thermalized = False):
         T_DS_0 = 1e-2*T_gamma_0
             
     sol_sm = Boltz.solve_boltzmann_eq_SM(T_gamma_0, T_nu_0)
-    sol_bsm = Boltz.solve_boltzmann_eq(T_gamma_0, T_nu_0, T_DS_0)
+    sol_bsm = Boltz.solve_boltzmann_eq_L(T_gamma_0, T_nu_0, T_DS_0)
     
     time_end = time.time()
     
